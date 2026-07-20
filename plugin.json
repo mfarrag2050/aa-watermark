@@ -1,0 +1,11 @@
+{
+  "environment": {
+    "plugins": [
+      {
+        "name": "AA Logo Watermark",
+        "url": "https://mfarrag2050.github.io/aa-watermark/plugin.html",
+        "icon": "https://mfarrag2050.github.io/aa-watermark/icon.png"
+      }
+    ]
+  }
+}
