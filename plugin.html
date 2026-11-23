@@ -983,11 +983,13 @@
                     const isLeftLogo = document.getElementById("leftLogoCheckbox").checked;
                     let x, y;
                     if (isStory) {
-                        // AA story templates: 79px mark, 62px side margin, 110px from the bottom (clear of the reply bar)
+                        // AA story template (approved spec): 79x79 mark at (62, 1731), 70% opacity, bottom-left
                         const lw = 79, lh = Math.round(79 * currentLogo.height / currentLogo.width);
-                        x = isLeftLogo ? 62 : canvas.width - lw - 62;
-                        y = canvas.height - lh - 110;
+                        x = 62;
+                        y = 1731;
+                        ctx.save(); ctx.globalAlpha = 0.70;
                         ctx.drawImage(currentLogo, x, y, lw, lh);
+                        ctx.restore();
                         if (returnCanvas) { resolve(canvas); return; }
                         const outT = (file.type && file.type !== "application/octet-stream") ? file.type : "image/jpeg";
                         canvas.toBlob(function (blob) { resolve({ name: logoluName(file.name || "gorsel.jpg"), blob, canvas }); }, outT, 0.95);
