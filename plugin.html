@@ -532,12 +532,21 @@
             <button id="cvVidChoose" class="cv-mini-btn" style="margin-top:0">Choose video</button>
             <button id="cvVidImgCrop" class="cv-mini-btn" style="margin-top:0" hidden>Crop image</button>
             <span id="cvVidName" class="cv-slim" style="margin-left:8px;color:#556"></span>
-            <div class="cv-slim" id="cvVidBgHint" style="margin-top:6px">Color = red background</div>
+            <div class="cv-slim" id="cvVidBgHint" style="margin-top:6px;display:none">Color = red background</div>
             <div id="cvVidTrimBlock" hidden>
               <div class="cv-label" id="cvVidTrimLbl" style="margin-top:12px">Trim</div>
               <input type="range" id="cvVidStart" min="0" max="100" value="0" step="0.01" style="width:100%;margin:0">
               <input type="range" id="cvVidEnd" min="0" max="100" value="100" step="0.01" style="width:100%;margin:4px 0 0">
               <div class="cv-slim" id="cvVidTrimInfo" style="text-align:center;margin-top:4px">0:00 – 0:00</div>
+              <div class="cv-slider-row" style="margin-top:10px">
+                <span class="cv-slim" id="cvVidFitLbl">Framing</span>
+                <select id="cvVidFit" style="flex:1"><option value="crop">Crop (fill the frame)</option><option value="fit">Whole frame + blurred background</option></select>
+              </div>
+              <div class="cv-slider-row" id="cvVidPanRow" style="margin-top:8px">
+                <span class="cv-slim" id="cvVidPanLbl">Position</span>
+                <input type="range" id="cvVidPan" min="0" max="100" value="50" style="flex:1">
+                <span class="cv-slim" id="cvVidPanVal">50%</span>
+              </div>
             </div>
 
             <div class="cv-subhead" id="cvVidGrpOutput">Output</div>
@@ -807,7 +816,7 @@
         cv_sec_brk:"Son dakika metni",
         cv_vid_title:"Video (deneysel)", cv_vid_choose:"Video seç", cv_vid_size:"Boyut", cv_vid_motion:"Hareket", cv_vid_play:"Oynat", cv_vid_pause:"Duraklat", cv_vid_export:"Videoyu dışa aktar", cv_vid_rec:"Kaydediliyor…", cv_vid_done:"Video indirildi ✓", cv_vid_unsup:"Bu tarayıcı video dışa aktarmayı desteklemiyor", vx_audio:"Ses hazırlanıyor…", vx_enc:"Video oluşturuluyor…", vx_cancel:"İptal", vx_cancelled:"İptal edildi", vx_opus:"Video indirildi ✓ — Not: bu tarayıcı AAC kodlayamıyor, ses Opus olarak kaydedildi (X kabul etmeyebilir).", vx_legacy:"Bu tarayıcıda hızlı MP4 kodlama yok; gerçek zamanlı kayda geçildi.",
         cv_mode_card:"Kart", cv_mode_video:"Video",
-        cv_vid_seg:"Son dakika", cv_vid_add:"+ Son dakika ekle", cv_vid_seglbl:"Son dakika metinleri", cv_vid_grp_source:"Kaynak", cv_vid_grp_output:"Çıktı", cv_vid_textsize:"Metin boyutu", cv_vid_bghint:"Renk = kırmızı arka plan", cv_src_video:"Video", cv_src_image:"Görsel", cv_src_color:"Renk", cv_vid_choose_img:"Görsel seç", cv_vid_cropimg:"Görseli kırp", cv_suggest:"Satırları öner", cv_seg_imgadd:"Görsel ekle", cv_seg_imgchange:"Görseli değiştir", cv_suggest_hint:"Enter = elle satır sonu",
+        cv_vid_seg:"Son dakika", cv_vid_add:"+ Son dakika ekle", cv_vid_seglbl:"Son dakika metinleri", cv_vid_grp_source:"Kaynak", cv_vid_grp_output:"Çıktı", cv_vid_textsize:"Metin boyutu", cv_vid_bghint:"Renk = kırmızı arka plan", cv_src_video:"Video", cv_src_image:"Görsel", cv_src_color:"Renk", cv_vid_choose_img:"Görsel seç", cv_vid_cropimg:"Görseli kırp", cv_suggest:"Satırları öner", cv_seg_imgadd:"Görsel ekle", cv_seg_imgchange:"Görseli değiştir", cv_suggest_hint:"Enter = elle satır sonu", vx_fit:"Yerleşim", vx_fit_crop:"Kırp (ekranı doldur)", vx_fit_fit:"Tamamı + bulanık arka plan", vx_pan:"Konum", vx_hold:(s)=>`video ${s}s — sonra son kare sabit kalır`,
         tab_r:"Reels", rl_mode_video:"Video", rl_mode_cover:"Kapak", rl_title:"Başlık", rl_loc:"Konum rozeti", rl_dur:"Başlık süresi", rl_clip:"Süre", rl_export_v:"Videoyu dışa aktar", rl_export_c:"Kapağı indir", rl_done_c:"Kapak indirildi ✓", rl_sample:"عنوان الفيديو هنا", rl_words:(n,mx)=>`Kelime: ${n} (en fazla ${mx})`, rl_clips:"Klipler", rl_add_video:"+ Video", rl_add_image:"+ Görsel", rl_total:(n,s)=>`Toplam: ${s}s (${n} klip)`, rl_needclip:"Önce klip ekleyin.", cv_vid_total:(n,s)=>`Toplam: ${s}s (${n} son dakika)`,
         cv_vid_replay:"Tekrar", cv_vid_trim:"Kırp (süre)", cv_vid_audio:"Ses", cv_vid_mode:"Mod", cv_vid_mix:"Karıştır", cv_vid_replace:"Değiştir", cv_vid_music:"Müzik", cv_vid_none:"— (video sesi)", cv_vid_audioerr:"Ses dosyası bulunamadı",
         cv_drop:"Kapak fotoğrafını sürükleyin veya tıklayın",
@@ -872,7 +881,7 @@
         cv_sec_brk:"Breaking text",
         cv_vid_title:"Video (experimental)", cv_vid_choose:"Choose video", cv_vid_size:"Size", cv_vid_motion:"Motion", cv_vid_play:"Play", cv_vid_pause:"Pause", cv_vid_export:"Export video", cv_vid_rec:"Recording…", cv_vid_done:"Video downloaded ✓", cv_vid_unsup:"This browser cannot export video", vx_audio:"Preparing audio…", vx_enc:"Building video…", vx_cancel:"Cancel", vx_cancelled:"Cancelled", vx_opus:"Video downloaded ✓ — Note: this browser cannot encode AAC, audio saved as Opus (X may reject it).", vx_legacy:"No fast MP4 encoder in this browser; using real-time recording.",
         cv_mode_card:"Card", cv_mode_video:"Video",
-        cv_vid_seg:"Breaking", cv_vid_add:"+ Add breaking", cv_vid_seglbl:"Breaking segments", cv_vid_grp_source:"Source", cv_vid_grp_output:"Output", cv_vid_textsize:"Text size", cv_vid_bghint:"Color = red background", cv_src_video:"Video", cv_src_image:"Image", cv_src_color:"Color", cv_vid_choose_img:"Choose image", cv_vid_cropimg:"Crop image", cv_suggest:"Suggest line breaks", cv_seg_imgadd:"Add image", cv_seg_imgchange:"Change image", cv_suggest_hint:"Enter = manual line break",
+        cv_vid_seg:"Breaking", cv_vid_add:"+ Add breaking", cv_vid_seglbl:"Breaking segments", cv_vid_grp_source:"Source", cv_vid_grp_output:"Output", cv_vid_textsize:"Text size", cv_vid_bghint:"Color = red background", cv_src_video:"Video", cv_src_image:"Image", cv_src_color:"Color", cv_vid_choose_img:"Choose image", cv_vid_cropimg:"Crop image", cv_suggest:"Suggest line breaks", cv_seg_imgadd:"Add image", cv_seg_imgchange:"Change image", cv_suggest_hint:"Enter = manual line break", vx_fit:"Framing", vx_fit_crop:"Crop (fill the frame)", vx_fit_fit:"Whole frame + blurred background", vx_pan:"Position", vx_hold:(s)=>`video ${s}s — then the last frame holds`,
         tab_r:"Reels", rl_mode_video:"Video", rl_mode_cover:"Cover", rl_title:"Title", rl_loc:"Location badge", rl_dur:"Title time", rl_clip:"Duration", rl_export_v:"Export video", rl_export_c:"Export cover", rl_done_c:"Cover downloaded ✓", rl_sample:"عنوان الفيديو هنا", rl_words:(n,mx)=>`Words: ${n} (max ${mx})`, rl_clips:"Clips", rl_add_video:"+ Video", rl_add_image:"+ Image", rl_total:(n,s)=>`Total: ${s}s (${n} clips)`, rl_needclip:"Add a clip first.", cv_vid_total:(n,s)=>`Total: ${s}s (${n} breaking)`,
         cv_vid_replay:"Replay", cv_vid_trim:"Trim", cv_vid_audio:"Audio", cv_vid_mode:"Mode", cv_vid_mix:"Mix", cv_vid_replace:"Replace", cv_vid_music:"Music", cv_vid_none:"— (video audio)", cv_vid_audioerr:"Audio file not found",
         cv_drop:"Drag a cover photo, or click",
@@ -952,7 +961,7 @@
       g('cvCropApply').textContent = t('cv_crop');
       g('cvLblGrad').textContent = t('cv_grad'); g('cvLblOpacity').textContent = t('cv_darkness'); g('cvLblReach').textContent = t('cv_reach');
       if (document.getElementById('cvModeCard')) { g('cvModeCard').textContent = t('cv_mode_card'); g('cvModeVideo').textContent = t('cv_mode_video'); }
-      if (document.getElementById('cvVidTitle')) { g('cvVidTitle').textContent = t('cv_vid_title'); g('cvVidChoose').textContent = (typeof cvVidSourceVal !== 'undefined' && cvVidSourceVal === 'image') ? t('cv_vid_choose_img') : t('cv_vid_choose'); g('cvVidSizeLbl').textContent = t('cv_vid_size'); g('cvVidMotionLbl').textContent = t('cv_vid_motion'); g('cvVidExport').textContent = t('cv_vid_export'); if(!cvVidState || !cvVidState.playing) g('cvVidPlay').textContent = t('cv_vid_play'); g('cvVidReplay').textContent = t('cv_vid_replay'); g('cvVidTrimLbl').textContent = t('cv_vid_trim'); g('cvVidAudioLbl').textContent = t('cv_vid_audio'); g('cvVidModeLbl').textContent = t('cv_vid_mode'); g('cvVidVolLbl').textContent = t('cv_vid_music'); g('cvVidAudioMode').options[0].text = t('cv_vid_mix'); g('cvVidAudioMode').options[1].text = t('cv_vid_replace'); if(typeof cvPopulateAudio==='function') cvPopulateAudio(); g('cvVidSegLbl').textContent = t('cv_vid_seglbl'); g('cvSegAdd').textContent = t('cv_vid_add'); g('cvVidGrpSource').textContent = t('cv_vid_grp_source'); g('cvVidGrpOutput').textContent = t('cv_vid_grp_output'); g('cvVidTextLbl').textContent = t('cv_vid_textsize'); g('cvVidBgHint').textContent = t('cv_vid_bghint'); if (document.getElementById('cvSrcVideo')){ g('cvSrcVideo').textContent = t('cv_src_video'); g('cvSrcImage').textContent = t('cv_src_image'); g('cvSrcColor').textContent = t('cv_src_color'); g('cvVidImgCrop').textContent = t('cv_vid_cropimg'); } if(typeof cvRenderSegs==='function') cvRenderSegs(); }
+      if (document.getElementById('cvVidTitle')) { g('cvVidTitle').textContent = t('cv_vid_title'); g('cvVidChoose').textContent = (typeof cvVidSourceVal !== 'undefined' && cvVidSourceVal === 'image') ? t('cv_vid_choose_img') : t('cv_vid_choose'); g('cvVidSizeLbl').textContent = t('cv_vid_size'); g('cvVidMotionLbl').textContent = t('cv_vid_motion'); g('cvVidExport').textContent = t('cv_vid_export'); if(!cvVidState || !cvVidState.playing) g('cvVidPlay').textContent = t('cv_vid_play'); g('cvVidReplay').textContent = t('cv_vid_replay'); g('cvVidTrimLbl').textContent = t('cv_vid_trim'); g('cvVidAudioLbl').textContent = t('cv_vid_audio'); g('cvVidModeLbl').textContent = t('cv_vid_mode'); g('cvVidVolLbl').textContent = t('cv_vid_music'); g('cvVidAudioMode').options[0].text = t('cv_vid_mix'); g('cvVidAudioMode').options[1].text = t('cv_vid_replace'); if(typeof cvPopulateAudio==='function') cvPopulateAudio(); g('cvVidSegLbl').textContent = t('cv_vid_seglbl'); g('cvSegAdd').textContent = t('cv_vid_add'); g('cvVidGrpSource').textContent = t('cv_vid_grp_source'); g('cvVidGrpOutput').textContent = t('cv_vid_grp_output'); g('cvVidTextLbl').textContent = t('cv_vid_textsize'); g('cvVidBgHint').textContent = t('cv_vid_bghint'); g('cvVidFitLbl').textContent = t('vx_fit'); g('cvVidFit').options[0].text = t('vx_fit_crop'); g('cvVidFit').options[1].text = t('vx_fit_fit'); g('cvVidPanLbl').textContent = t('vx_pan'); if (typeof cvVidUpdateTotal === 'function') cvVidUpdateTotal(); if (document.getElementById('cvSrcVideo')){ g('cvSrcVideo').textContent = t('cv_src_video'); g('cvSrcImage').textContent = t('cv_src_image'); g('cvSrcColor').textContent = t('cv_src_color'); g('cvVidImgCrop').textContent = t('cv_vid_cropimg'); } if(typeof cvRenderSegs==='function') cvRenderSegs(); }
       g('cvSecPhoto').textContent = t('cv_sec_photo'); g('cvSecText').textContent = (document.getElementById('tabB') && document.getElementById('tabB').classList.contains('active')) ? t('cv_sec_brk') : t('cv_sec_text'); g('cvRecropSq').textContent = t('cv_recrop'); g('cvRecropPt').textContent = t('cv_recrop'); g('cvRecropSt').textContent = t('cv_recrop'); g('wmCardsHint').innerHTML = t('w_cards_hint');
       if (typeof cvUpdateWordCount === 'function') cvUpdateWordCount();
       if (typeof cvRender === 'function' && !document.getElementById('tab-cover').hidden) cvRender();
@@ -2435,7 +2444,12 @@
     function cvSegDur(seg){ const n = cvParseTokens((seg && seg.headline) || '').length; return Math.max(7, Math.min(10, 7 + Math.max(0, n - 8) * 0.3)); }
     function cvSegTimeline(){ let ts = 0; const arr = []; cvSegments.forEach(s => { const d = cvSegDur(s); arr.push({ start: ts, end: ts + d, dur: d, seg: s }); ts += d; }); return { arr, total: ts }; }
 
-    function cvVidUpdateTotal(){ const el = document.getElementById('cvVidTotal'); if (!el) return; const tl = cvSegTimeline(); el.textContent = t('cv_vid_total')(cvSegments.length, Math.round(tl.total)); }
+    function cvVidUpdateTotal(){
+        const el = document.getElementById('cvVidTotal'); if (!el) return; const tl = cvSegTimeline();
+        let txt = t('cv_vid_total')(cvSegments.length, Math.round(tl.total));
+        if (cvVidHasVideo()){ const L = (cvVidState.end || cvVideoEl.duration || 0) - (cvVidState.start || 0); if (L > 0 && L < tl.total - 0.05) txt += ' · ' + t('vx_hold')(L.toFixed(1)); }
+        el.textContent = txt;
+    }
     function cvRenderSegs(){
         const list = document.getElementById('cvSegList'); if (!list) return;
         list.innerHTML = '';
@@ -2498,7 +2512,8 @@
             const mul = (typeof cvVidTextMul === 'function') ? cvVidTextMul() : 0.85;
             const f = cvWrapTokens(tokens, bw, Math.round(80 * mul), Math.round(44 * mul), allBold, 6);
             const nL = Math.max(f.lines.length, 1);
-            const firstY = (H - 200) - (nL - 1) * f.lh;
+            const isStory = (H >= 1900), bot = isStory ? 180 : 0;   // 1080x1920: keep text above the Reels/Stories caption and reply bar
+            const firstY = (H - 200 - bot) - (nL - 1) * f.lh;
             const easeOut = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
             const seg = (a, l) => motion ? Math.max(0, Math.min(1, (trel - a) / l)) : 1;
             let outro = 1;
@@ -2521,20 +2536,48 @@
                 const a = easeOut(seg(0.30 + nL * 0.12 + 0.05, 0.35));
                 ctx.save(); ctx.globalAlpha = a * outro;
                 ctx.font = '700 ' + Math.round(34 * mul) + 'px HNArabic'; ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.direction = 'rtl'; ctx.textBaseline = 'alphabetic';
-                ctx.fillText(src, rx, H - 135);
+                ctx.fillText(src, rx, H - 135 - bot);
                 ctx.restore();
             }
-            if (cvLogo.complete && cvLogo.naturalWidth){ ctx.save(); ctx.globalAlpha = outro; ctx.drawImage(cvLogo, 51, H - 51 - 63, 63, 63); ctx.restore(); }
+            if (cvLogo.complete && cvLogo.naturalWidth){ ctx.save(); if (isStory){ ctx.globalAlpha = 0.70 * outro; ctx.drawImage(cvLogo, 62, 1731, 79, 79); } else { ctx.globalAlpha = outro; ctx.drawImage(cvLogo, 51, H - 51 - 63, 63, 63); } ctx.restore(); }
         } finally { cvCtx = prev; CVW = pw; CVH = ph; }
+    }
+
+    // Draw a video frame into W×H.
+    //  fit 'crop': fill the frame; pan 0..1 slides the crop along the axis that overflows (0 = left/top, 1 = right/bottom).
+    //  fit 'fit' : whole frame, over a blurred and darkened copy of itself (for 16:9 footage in 9:16 / 1:1 outputs).
+    const aaBlurA = document.createElement('canvas'), aaBlurB = document.createElement('canvas');
+    function aaDrawVideoFramed(ctx, src, vw, vh, W, H, fit, pan){
+        if (!vw || !vh) return;
+        const ir = vw / vh, tr = W / H, p = (pan == null) ? 0.5 : Math.max(0, Math.min(1, pan));
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        let sx, sy, sw, sh;
+        if (ir > tr){ sh = vh; sw = sh * tr; sx = (vw - sw) * (fit === 'fit' ? 0.5 : p); sy = 0; }
+        else { sw = vw; sh = sw / tr; sx = 0; sy = (vh - sh) * (fit === 'fit' ? 0.5 : p); }
+        if (fit !== 'fit' || Math.abs(ir - tr) < 0.02){ ctx.drawImage(src, sx, sy, sw, sh, 0, 0, W, H); return; }
+        // blurred background: shrink hard, then scale back up in two steps (portable, cheap per frame)
+        const aw = Math.max(8, Math.round(W / 24)), ah = Math.max(8, Math.round(H / 24));
+        const bw = Math.round(W / 6), bh = Math.round(H / 6);
+        if (aaBlurA.width !== aw || aaBlurA.height !== ah){ aaBlurA.width = aw; aaBlurA.height = ah; }
+        if (aaBlurB.width !== bw || aaBlurB.height !== bh){ aaBlurB.width = bw; aaBlurB.height = bh; }
+        const a = aaBlurA.getContext('2d'), b = aaBlurB.getContext('2d');
+        a.imageSmoothingEnabled = true; a.imageSmoothingQuality = 'high'; a.drawImage(src, sx, sy, sw, sh, 0, 0, aw, ah);
+        b.imageSmoothingEnabled = true; b.imageSmoothingQuality = 'high'; b.drawImage(aaBlurA, 0, 0, bw, bh);
+        ctx.drawImage(aaBlurB, 0, 0, W, H);
+        ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fillRect(0, 0, W, H);
+        // whole frame; in tall outputs sit a little above centre so titles below it stay on the blur
+        let dw, dh; if (ir > tr){ dw = W; dh = W / ir; } else { dh = H; dw = H * ir; }
+        const cy = (H / W > 1.5) ? H * 0.45 : H * 0.5;
+        const dx = (W - dw) / 2, dy = Math.max(0, Math.min(H - dh, cy - dh / 2));
+        ctx.drawImage(src, 0, 0, vw, vh, dx, dy, dw, dh);
     }
     function cvVidBg(ctx, W, H, T){
         if (cvVidHasVideo()){
             const fr = cvVidState._frame;   // decoded frame (export) or the <video> element (preview)
             const vsrc = fr || cvVideoEl;
             const vw = fr ? fr.displayWidth : cvVideoEl.videoWidth, vh = fr ? fr.displayHeight : cvVideoEl.videoHeight;
-            const ir = vw / vh, tr = W / H; let sw, sh, sx, sy;
-            if (ir > tr){ sh = vh; sw = sh * tr; sx = (vw - sw) / 2; sy = 0; } else { sw = vw; sh = sw / tr; sx = 0; sy = (vh - sh) / 2; }
-            ctx.drawImage(vsrc, sx, sy, sw, sh, 0, 0, W, H); return true;
+            aaDrawVideoFramed(ctx, vsrc, vw, vh, W, H, document.getElementById('cvVidFit').value, (parseInt(document.getElementById('cvVidPan').value, 10) || 0) / 100);
+            return true;
         }
         if (cvVidSourceVal === 'image'){
             const drawOne = (ref) => {
@@ -2587,8 +2630,8 @@
         if (!cvVidState.playing) return;
         const total = Math.max(0.1, cvSegTimeline().total);
         let T = (performance.now() - cvVidClock) / 1000;
-        if (T >= total){ cvVidClock = performance.now(); T = 0; }
-        if (cvVidHasVideo()){ const te = cvVidState.end || cvVideoEl.duration || total; const ts = cvVidState.start || 0; if (cvVideoEl.currentTime >= te) cvVideoEl.currentTime = ts; }
+        if (T >= total){ cvVidClock = performance.now(); T = 0; if (cvVidHasVideo()){ cvVideoEl.currentTime = cvVidState.start || 0; cvVideoEl.play().catch(() => {}); } }
+        if (cvVidHasVideo()){ const te = cvVidState.end || cvVideoEl.duration || total; if (cvVideoEl.currentTime >= te && !cvVideoEl.paused) cvVideoEl.pause(); }   // clip shorter than the segments: hold the last frame
         cvVidDrawAtT(cvVidCtx, cvVidCanvas.width, cvVidCanvas.height, T);
         cvVidState.raf = requestAnimationFrame(cvVidLoop);
     }
@@ -2599,6 +2642,7 @@
         if (b < a + 0.3) { if (this && this.id === 'cvVidStart') a = Math.max(0, b - 0.3); else b = Math.min(cvVidState.dur, a + 0.3); document.getElementById('cvVidStart').value = a; document.getElementById('cvVidEnd').value = b; }
         cvVidState.start = a; cvVidState.end = b;
         document.getElementById('cvVidTrimInfo').textContent = cvFmt(a) + ' – ' + cvFmt(b) + '  (' + cvFmt(b - a) + ')';
+        cvVidUpdateTotal();
         if (!cvVidState.playing) cvVidPreviewStatic();
     }
 
@@ -2610,11 +2654,20 @@
         choose.hidden = isColor;
         choose.textContent = isImage ? t('cv_vid_choose_img') : t('cv_vid_choose');
         document.getElementById('cvVidImgCrop').hidden = !(isImage && cvVidImg);
+        document.getElementById('cvVidBgHint').style.display = isColor ? '' : 'none';
         if (typeof cvRenderSegs === 'function') cvRenderSegs();
         document.getElementById('cvVidTrimBlock').hidden = !(isVideo && cvVidState.loaded);
         if (typeof cvVidStop === 'function') cvVidStop();
         cvVidPreviewStatic();
     }
+    function cvVidFramingUI(){
+        const fit = document.getElementById('cvVidFit').value;
+        document.getElementById('cvVidPanRow').style.display = (fit === 'fit') ? 'none' : '';
+        document.getElementById('cvVidPanVal').textContent = document.getElementById('cvVidPan').value + '%';
+        if (!cvVidState.playing) cvVidPreviewStatic();
+    }
+    document.getElementById('cvVidFit').addEventListener('change', cvVidFramingUI);
+    document.getElementById('cvVidPan').addEventListener('input', cvVidFramingUI);
     document.getElementById('cvSrcVideo').addEventListener('click', () => cvVidSetSource('video'));
     document.getElementById('cvSrcImage').addEventListener('click', () => cvVidSetSource('image'));
     document.getElementById('cvSrcColor').addEventListener('click', () => cvVidSetSource('color'));
@@ -2725,7 +2778,7 @@
         rec.start();
         const step = () => {
             const T = (performance.now() - cvVidClock) / 1000;
-            if (cvVidHasVideo()){ const te = cvVidState.end || cvVideoEl.duration || total; const ts = cvVidState.start || 0; if (cvVideoEl.currentTime >= te) cvVideoEl.currentTime = ts; }
+            if (cvVidHasVideo()){ const te = cvVidState.end || cvVideoEl.duration || total; if (cvVideoEl.currentTime >= te && !cvVideoEl.paused) cvVideoEl.pause(); }
             octx.clearRect(0, 0, sz.W, sz.H);
             cvVidDrawAtT(octx, sz.W, sz.H, Math.min(T, total));
             cvVidStatus(t('cv_vid_rec') + ' ' + Math.min(100, Math.round(T / total * 100)) + '%');
@@ -2926,8 +2979,8 @@
             const placements = [];
             if (hasVid && !(musicFile && mode === 'replace')){
                 if (cvVidState.audioBufSrc !== cvVideoEl.src){ cvVidState.audioBuf = await aaDecodeFileAudio(cvVideoEl.src); cvVidState.audioBufSrc = cvVideoEl.src; }
-                // the clip loops over the trim range for as long as the breaking segments last (same as the preview)
-                for (let w = 0; w < total; w += L) placements.push({ buf: cvVidState.audioBuf, when: w, offset: s0, dur: Math.min(L, total - w), gain: 1 });
+                // clip audio plays once; if the segments last longer, the picture holds the last frame (same as the preview)
+                placements.push({ buf: cvVidState.audioBuf, when: 0, offset: s0, dur: Math.min(L, total), gain: 1 });
             }
             let audio = null;
             try { audio = await aaMixAudio(total, placements, musicFile ? { file: musicFile, vol } : null); } catch (e) { cvVidStatus(t('cv_vid_audioerr')); return; }
@@ -2939,7 +2992,7 @@
                     cancelled: () => run.cancel,
                     progress: p => cvVidStatus(t('vx_enc') + ' ' + Math.round(p * 100) + '%'),
                     draw: async (ctx, T) => {
-                        if (hasVid){ const lt = s0 + (T % L); if (reader) cvVidState._frame = await reader.frameAt(lt); else await aaSeekVideo(cvVideoEl, lt); }
+                        if (hasVid){ const lt = Math.min(s0 + T, e0 - 0.02); if (reader) cvVidState._frame = await reader.frameAt(lt); else await aaSeekVideo(cvVideoEl, lt); }
                         cvVidDrawAtT(ctx, sz.W, sz.H, T);
                     } });
             } catch (e) {
@@ -3024,6 +3077,20 @@
                 s1.addEventListener('input', sync); s2.addEventListener('input', sync);
                 row.appendChild(s1); row.appendChild(s2); row.appendChild(info);
                 sync();
+                // framing: crop (with position) or whole frame over blurred background
+                const fr = document.createElement('div'); fr.className = 'cv-slider-row'; fr.style.marginTop = '6px';
+                const fsel = document.createElement('select'); fsel.style.flex = '1';
+                [['crop', t('vx_fit_crop')], ['fit', t('vx_fit_fit')]].forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; fsel.appendChild(op); });
+                fsel.value = it.fit || 'crop';
+                const pr = document.createElement('div'); pr.className = 'cv-slider-row'; pr.style.marginTop = '6px';
+                const pl = document.createElement('span'); pl.className = 'cv-slim'; pl.textContent = t('vx_pan');
+                const ps = document.createElement('input'); ps.type = 'range'; ps.min = 0; ps.max = 100; ps.value = Math.round((it.pan == null ? 0.5 : it.pan) * 100); ps.style.flex = '1';
+                const pv = document.createElement('span'); pv.className = 'cv-slim'; pv.textContent = ps.value + '%';
+                pr.style.display = (fsel.value === 'fit') ? 'none' : '';
+                fsel.addEventListener('change', () => { it.fit = fsel.value; pr.style.display = (it.fit === 'fit') ? 'none' : ''; if (!rlState.playing) rlPreview(); });
+                ps.addEventListener('input', () => { it.pan = parseInt(ps.value, 10) / 100; pv.textContent = ps.value + '%'; if (!rlState.playing) rlPreview(); });
+                fr.appendChild(fsel); pr.appendChild(pl); pr.appendChild(ps); pr.appendChild(pv);
+                row.appendChild(fr); row.appendChild(pr);
             }
             list.appendChild(row);
         });
@@ -3064,6 +3131,7 @@
             else if (it.type === 'image' && it.img){ src = it.img; nw = it.img.width; nh = it.img.height; }
         }
         if (!src){ ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H); return; }
+        if (it.type === 'video'){ aaDrawVideoFramed(ctx, src, nw, nh, W, H, it.fit || 'crop', it.pan == null ? 0.5 : it.pan); return; }
         let sx, sy, sw, sh;
         if (it.crop){ sx = it.crop.sx; sy = it.crop.sy; sw = it.crop.sw; sh = it.crop.sh; }
         else { const ir = nw / nh, tr = W / H; if (ir > tr){ sh = nh; sw = sh * tr; sx = (nw - sw) / 2; sy = 0; } else { sw = nw; sh = sw / tr; sx = 0; sy = (nh - sh) / 2; } }
@@ -3072,7 +3140,7 @@
     }
     function rlBadge(ctx, W, text, alpha){
         if (!text || alpha <= 0.01) return;
-        const fs = 36, padX = 22, bh = 58, r = 8, mx = 60, my = 60;
+        const fs = 36, padX = 22, bh = 58, r = 8, mx = 60, my = (ctx.canvas.height >= 1900) ? 250 : 60;   // story/reels: below the top UI bar
         ctx.save(); ctx.globalAlpha = alpha;
         ctx.font = '700 ' + fs + 'px HNArabic';
         const tw = ctx.measureText(text).width, w = tw + padX * 2, x = W - mx - w, y = my;
@@ -3082,7 +3150,7 @@
         ctx.fillText(text, x + w / 2, y + bh / 2 + 2);
         ctx.restore();
     }
-    function rlDrawTitle(ctx, W, H, alpha){
+    function rlDrawTitle(ctx, W, H, alpha, minTop){
         if (alpha <= 0.01) return;
         const txt = (rlTitleEl.value || '').trim() || t('rl_sample');
         const prev = cvCtx, pw = CVW, ph = CVH; cvCtx = ctx; CVW = W; CVH = H;
@@ -3090,7 +3158,8 @@
             const mul = rlMul();
             const f = cvWrapTokens(cvParseTokens(txt), W - 150, Math.round(76 * mul), Math.round(40 * mul), true, 4);
             const nL = Math.max(f.lines.length, 1);
-            const firstY = Math.round(H * 0.66) - (nL - 1) * f.lh;
+            let firstY = Math.round(H * 0.66) - (nL - 1) * f.lh;
+            if (minTop) firstY = Math.max(firstY, minTop + f.fs + 40);   // first clip shown whole: start the title under the picture
             ctx.save(); ctx.globalAlpha = alpha;
             ctx.shadowColor = 'rgba(20,30,68,.62)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 2;
             f.lines.forEach((ln, i) => cvDrawLineRightEdge(ln, W - 70, firstY + i * f.lh, f.fs, true));
@@ -3119,9 +3188,18 @@
                 ba = Math.max(0, Math.min(1, (T - 0.25) / 0.45));
             } else { a = (T < dur) ? 1 : 0; }
         }
-        rlDrawTitle(ctx, W, H, a);
+        // when the first clip is a wide video shown whole (blurred background), keep the title off the picture
+        let minTop = 0; const first = tl.arr[0] && tl.arr[0].it;
+        if (first && first.type === 'video' && first.fit === 'fit' && H / W > 1.5){
+            const vw = first._frame ? first._frame.displayWidth : (first.el && first.el.videoWidth), vh = first._frame ? first._frame.displayHeight : (first.el && first.el.videoHeight);
+            if (vw && vh && vw / vh > W / H){ const dh = W * vh / vw; minTop = Math.round(H * 0.45 + dh / 2); }
+        }
+        rlDrawTitle(ctx, W, H, a, minTop);
         rlBadge(ctx, W, (rlLocEl.value || '').trim(), ba);
-        if (cvLogo.complete && cvLogo.naturalWidth) ctx.drawImage(cvLogo, 51, H - 51 - 63, 63, 63);
+        if (cvLogo.complete && cvLogo.naturalWidth){
+            if (H >= 1900){ ctx.save(); ctx.globalAlpha = 0.70; ctx.drawImage(cvLogo, 62, 1731, 79, 79); ctx.restore(); }   // AA story template
+            else ctx.drawImage(cvLogo, 51, H - 51 - 63, 63, 63);
+        }
     }
     function rlSyncMedia(T){
         const tl = rlTimeline();
