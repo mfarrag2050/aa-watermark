@@ -308,9 +308,12 @@
         }
         .cv-prev-item { display:flex; flex-direction:column; align-items:center; gap:8px; }
         .cv-prev-label { font-size:11px; font-weight:700; letter-spacing:.03em; color:#556; }
-        #cvPrevSq, #cvPrevPt { width:100%; max-width:300px; height:auto; border-radius:10px; border:1px solid #e5e7eb; background:#111; box-shadow:0 6px 18px rgba(0,0,0,.12); cursor:pointer; }
+        #cvPrevSq, #cvPrevPt, #cvPrevSt { width:100%; max-width:300px; height:auto; border-radius:10px; border:1px solid #e5e7eb; background:#111; box-shadow:0 6px 18px rgba(0,0,0,.12); cursor:pointer; }
         #cvPrevSq { aspect-ratio:1/1; }
         #cvPrevPt { aspect-ratio:1080/1440; }
+        #cvPrevSt { aspect-ratio:1080/1920; max-width:240px; }
+        #wmCardsHint { display:none; margin-top:8px; padding:8px 11px; border-radius:10px; background:#eef4ff; color:#1a5ed8; font-size:12px; line-height:1.5; }
+        #wmCardsHint a { color:#1a5ed8; font-weight:700; cursor:pointer; text-decoration:underline; }
         .cv-preview-sticky { gap:18px; }
         #cvVideoSec[hidden] { display:none; }
         #cvVidSize { padding:8px; border:1px solid #d6dae6; border-radius:8px; font-family:inherit; font-size:13px; background:#fff; color:#111827; }
@@ -320,11 +323,13 @@
         .cv-right { order:-1; margin-bottom:16px; }
         .cv-preview-sticky { flex-direction:row; flex-wrap:wrap; justify-content:center; gap:14px; }
         #cvPrevSq, #cvPrevPt { max-width:150px; }
+        #cvPrevSt { max-width:120px; }
         @media (min-width:760px){
             .cv-grid { display:grid; grid-template-columns: minmax(0,1fr) 380px; gap:20px; align-items:start; }
             .cv-right { order:0; margin-bottom:0; position:sticky; top:8px; }
             .cv-preview-sticky { flex-direction:column; flex-wrap:nowrap; gap:18px; }
             #cvPrevSq, #cvPrevPt { max-width:300px; }
+            #cvPrevSt { max-width:240px; }
         }
         #cvBrkModeBar { display:flex; gap:6px; margin-bottom:14px; }
         #cvBrkModeBar[hidden] { display:none; }
@@ -415,6 +420,7 @@
         </label>
     </div>
 
+    <div id="wmCardsHint"></div>
     <div class="opt-row" id="boardRow" style="display:none">
         <input type="text" id="boardTitle" dir="auto" placeholder="Pano başlığı (isteğe bağlı)" />
     </div>
@@ -579,6 +585,11 @@
               <div class="cv-prev-label">Instagram · 1080×1440</div>
               <canvas id="cvPrevPt" width="1080" height="1440"></canvas>
               <button id="cvRecropPt" class="cv-mini-btn" disabled>Re-crop</button>
+            </div>
+            <div class="cv-prev-item">
+              <div class="cv-prev-label">Story · 1080×1920</div>
+              <canvas id="cvPrevSt" width="1080" height="1920"></canvas>
+              <button id="cvRecropSt" class="cv-mini-btn" disabled>Re-crop</button>
             </div>
             <div class="cv-hint" id="cvHint" style="margin-top:4px;">Live preview</div>
           </div>
@@ -756,6 +767,7 @@
       tr: {
         w_all:"Tüm boyutlar (Instagram + X + Story)", w_all_title:"Her görsel Instagram (1080x1350), X (1080x1080) ve Story (1080x1920) boyutlarında, klasörlere ayrılmış tek ZIP olarak iner",
         w_board:"Onay panosu oluştur", w_board_title:"Tüm çıktıları tek bir görselde toplar — masaya onay için göndermek üzere", w_board_ph:"Pano başlığı (isteğe bağlı)",
+        w_cards_hint:"Başlık ve tasarım stilleri (Stil 01 · Stil 02 · 3 Satır · Son dakika) için <a data-go='tabC'>Kartlar</a> sekmesini kullanın — X + Instagram + Story tek seferde iner.",
         w_gifdelay:"GIF kare süresi:", w_story:"Story", w_copy:"Kopyala", w_copied:"Kopyalandı ✓", w_archive:"Çekim tarihi haberden eskiyse fotoğraf arşivdendir",
         w_low:(d)=>`Düşük çözünürlük (${d})`, w_low_short:"Düşük çözünürlük", w_low_tip:(l)=>"Bu boyutlarda büyütülecek: "+l, w_dup:(l)=>"Benzer: #"+l, w_dup_tip:"Bu kareye çok benzeyen görseller var",
         w_sum_low:(n)=>`${n} görsel düşük çözünürlüklü (büyütülecek)`, w_sum_dup:(n)=>`${n} görsel birbirine çok benziyor — aynı kare tekrar etmesin`,
@@ -800,10 +812,10 @@
         cv_style:"Stil", cv_s02:"Stil 02", cv_s01:"Stil 01", cv_s3l:"3 Satır",
         cv_kicker:"Üst satır", cv_headline:"Başlık",
         cv_open:"Sonucu Photopea'da aç", cv_hint:"Canlı önizleme",
-        cv_export:"Kartları indir (X + Instagram)",
+        cv_export:"Kartları indir (X + Instagram + Story)",
         cv_needphoto:"Önce kapak fotoğrafı ekleyin.",
-        cv_downloaded:"2 kart indirildi ✓",
-        cv_opened:"2 kart Photopea'da açıldı ✓",
+        cv_downloaded:"3 kart indirildi ✓",
+        cv_opened:"3 kart Photopea'da açıldı ✓",
         cv_allbold:"Tümü kalın",
         cv_bold_hint:"İpucu: *yıldız* = kalın, _alt çizgi_ = vurgu çizgisi",
         cv_words:(n,lo,hi)=>`Kelime: ${n} (${lo}–${hi} önerilir)`,
@@ -820,6 +832,7 @@
       en: {
         w_all:"All sizes (Instagram + X + Story)", w_all_title:"Each image is exported as Instagram (1080x1350), X (1080x1080) and Story (1080x1920) in one ZIP with a folder per size",
         w_board:"Build approval board", w_board_title:"Collects every output into one image to send to the desk for approval", w_board_ph:"Board title (optional)",
+        w_cards_hint:"For a headline and design styles (Style 01 · Style 02 · 3 Lines · Breaking) use the <a data-go='tabC'>Cards</a> tab — X + Instagram + Story export together.",
         w_gifdelay:"GIF frame time:", w_story:"Story", w_copy:"Copy", w_copied:"Copied ✓", w_archive:"If the shot date is older than the story, the photo is from the archive",
         w_low:(d)=>`Low resolution (${d})`, w_low_short:"Low resolution", w_low_tip:(l)=>"Will be upscaled for: "+l, w_dup:(l)=>"Similar: #"+l, w_dup_tip:"Other images look almost the same",
         w_sum_low:(n)=>`${n} image(s) are low resolution (will be upscaled)`, w_sum_dup:(n)=>`${n} images look almost identical — avoid repeating the same shot`,
@@ -864,10 +877,10 @@
         cv_style:"Style", cv_s02:"Style 02", cv_s01:"Style 01", cv_s3l:"3 Lines",
         cv_kicker:"Top line (kicker)", cv_headline:"Headline",
         cv_open:"Open result in Photopea", cv_hint:"Live preview",
-        cv_export:"Export cards (X + Instagram)",
+        cv_export:"Export cards (X + Instagram + Story)",
         cv_needphoto:"Add a cover photo first.",
-        cv_downloaded:"2 cards downloaded ✓",
-        cv_opened:"2 cards opened in Photopea ✓",
+        cv_downloaded:"3 cards downloaded ✓",
+        cv_opened:"3 cards opened in Photopea ✓",
         cv_allbold:"All bold",
         cv_bold_hint:"Tip: *stars* = bold, _underscore_ = accent under word",
         cv_words:(n,lo,hi)=>`Words: ${n} (${lo}–${hi} recommended)`,
@@ -937,7 +950,7 @@
       g('cvLblGrad').textContent = t('cv_grad'); g('cvLblOpacity').textContent = t('cv_darkness'); g('cvLblReach').textContent = t('cv_reach');
       if (document.getElementById('cvModeCard')) { g('cvModeCard').textContent = t('cv_mode_card'); g('cvModeVideo').textContent = t('cv_mode_video'); }
       if (document.getElementById('cvVidTitle')) { g('cvVidTitle').textContent = t('cv_vid_title'); g('cvVidChoose').textContent = (typeof cvVidSourceVal !== 'undefined' && cvVidSourceVal === 'image') ? t('cv_vid_choose_img') : t('cv_vid_choose'); g('cvVidSizeLbl').textContent = t('cv_vid_size'); g('cvVidMotionLbl').textContent = t('cv_vid_motion'); g('cvVidExport').textContent = t('cv_vid_export'); if(!cvVidState || !cvVidState.playing) g('cvVidPlay').textContent = t('cv_vid_play'); g('cvVidReplay').textContent = t('cv_vid_replay'); g('cvVidTrimLbl').textContent = t('cv_vid_trim'); g('cvVidAudioLbl').textContent = t('cv_vid_audio'); g('cvVidModeLbl').textContent = t('cv_vid_mode'); g('cvVidVolLbl').textContent = t('cv_vid_music'); g('cvVidAudioMode').options[0].text = t('cv_vid_mix'); g('cvVidAudioMode').options[1].text = t('cv_vid_replace'); if(typeof cvPopulateAudio==='function') cvPopulateAudio(); g('cvVidSegLbl').textContent = t('cv_vid_seglbl'); g('cvSegAdd').textContent = t('cv_vid_add'); g('cvVidGrpSource').textContent = t('cv_vid_grp_source'); g('cvVidGrpOutput').textContent = t('cv_vid_grp_output'); g('cvVidTextLbl').textContent = t('cv_vid_textsize'); g('cvVidBgHint').textContent = t('cv_vid_bghint'); if (document.getElementById('cvSrcVideo')){ g('cvSrcVideo').textContent = t('cv_src_video'); g('cvSrcImage').textContent = t('cv_src_image'); g('cvSrcColor').textContent = t('cv_src_color'); g('cvVidImgCrop').textContent = t('cv_vid_cropimg'); } if(typeof cvRenderSegs==='function') cvRenderSegs(); }
-      g('cvSecPhoto').textContent = t('cv_sec_photo'); g('cvSecText').textContent = (document.getElementById('tabB') && document.getElementById('tabB').classList.contains('active')) ? t('cv_sec_brk') : t('cv_sec_text'); g('cvRecropSq').textContent = t('cv_recrop'); g('cvRecropPt').textContent = t('cv_recrop');
+      g('cvSecPhoto').textContent = t('cv_sec_photo'); g('cvSecText').textContent = (document.getElementById('tabB') && document.getElementById('tabB').classList.contains('active')) ? t('cv_sec_brk') : t('cv_sec_text'); g('cvRecropSq').textContent = t('cv_recrop'); g('cvRecropPt').textContent = t('cv_recrop'); g('cvRecropSt').textContent = t('cv_recrop'); g('wmCardsHint').innerHTML = t('w_cards_hint');
       if (typeof cvUpdateWordCount === 'function') cvUpdateWordCount();
       if (typeof cvRender === 'function' && !document.getElementById('tab-cover').hidden) cvRender();
       g('langTr').classList.toggle('active', LANG === 'tr');
@@ -973,12 +986,17 @@
     function syncOptionRows() {
         boardRow.style.display = boardCheckbox.checked ? "flex" : "none";
         gifDelayRow.style.display = gifCheckbox.checked ? "flex" : "none";
+        const hint = document.getElementById('wmCardsHint');
+        if (hint) { hint.innerHTML = t('w_cards_hint'); hint.style.display = allSizesCheckbox.checked ? "block" : "none"; }
     }
     boardCheckbox.addEventListener('change', () => {
         try { localStorage.setItem('aa_board', boardCheckbox.checked); } catch (e) {}
         syncOptionRows();
     });
-    allSizesCheckbox.addEventListener('change', () => decorateThumbs());
+    allSizesCheckbox.addEventListener('change', () => { decorateThumbs(); syncOptionRows(); });
+    document.getElementById('wmCardsHint').addEventListener('click', (e) => {
+        const a = e.target.closest('[data-go]'); if (a) document.getElementById(a.dataset.go).click();
+    });
 
     dimensionSelect.addEventListener("change", () => {
         for (let i = 0; i < selectedFiles.length; i++) {
@@ -1869,7 +1887,8 @@
     // ===== Dual-size cover: Square 1080x1080 (X) + Portrait 1080x1440 (Instagram) =====
     const cvSizes = [
         { key:'sq', W:1080, H:1080, canvas:document.getElementById('cvPrevSq'), rc:document.getElementById('cvRecropSq'), fileTag:'square' },
-        { key:'pt', W:1080, H:1440, canvas:document.getElementById('cvPrevPt'), rc:document.getElementById('cvRecropPt'), fileTag:'portrait' }
+        { key:'pt', W:1080, H:1440, canvas:document.getElementById('cvPrevPt'), rc:document.getElementById('cvRecropPt'), fileTag:'portrait' },
+        { key:'st', W:1080, H:1920, canvas:document.getElementById('cvPrevSt'), rc:document.getElementById('cvRecropSt'), fileTag:'story' }
     ];
     let cvCtx = null, CVW = 1080, CVH = 1440;   // set per render pass
 
@@ -1881,7 +1900,7 @@
     const cvSourceWrap = document.getElementById('cvSourceWrap');
     const cvDrop = document.getElementById('cvDrop');
     const cvFileInput = document.getElementById('cvFileInput');
-    const cvState = { style:'s02', img:null, imgURL:null, crop:{ sq:null, pt:null } };
+    const cvState = { style:'s02', img:null, imgURL:null, crop:{ sq:null, pt:null, st:null } };
     const CV_SAMPLE = {
         head:     "لا سقف يحميهم.. الشتاء يضاعف معاناة _نازحي غزة_",
         title3l:  "الشتاء يضاعف معاناة نازحي غزة",
@@ -2055,7 +2074,7 @@
         if (target === 'reelitem'){ url = ref && ref.url; const s3 = rlSizeObj(); cvCropRatioVal = s3.W / s3.H; }
         else if (target === 'vidseg'){ url = ref && ref.imgURL; const s2 = cvVidSizeObj(); cvCropRatioVal = s2.W / s2.H; }
         else if (target === 'vid'){ url = cvVidImgURL; const s = cvVidSizeObj(); cvCropRatioVal = s.W / s.H; }
-        else { url = cvState.imgURL; cvCropRatioVal = (target === 'sq') ? 1 : (1080 / 1440); }
+        else { url = cvState.imgURL; cvCropRatioVal = (target === 'sq') ? 1 : (target === 'st' ? (1080 / 1920) : (1080 / 1440)); }
         if (!url) return;
         cvCropImg.onload = cvInitCrop;
         if (cvCropImg.src !== url) cvCropImg.src = url;
@@ -2273,6 +2292,9 @@
         cvCtx = size.canvas.getContext('2d'); CVW = size.W; CVH = size.H;
         const cx = CVW / 2, boxW = 880;
         const isSquare = (CVH <= 1200);
+        const isStory = (CVH >= 1900);              // 1080x1920: keep text clear of the story UI (top bar / reply bar)
+        const topPad = isStory ? 270 : 0;           // extra top margin for s02 / s3l
+        const botPad = isStory ? 180 : 0;           // extra bottom margin for s01 / brk
         cvCtx.clearRect(0, 0, CVW, CVH);
         cvCtx.fillStyle = '#111'; cvCtx.fillRect(0, 0, CVW, CVH);
         const demo = (!cvState.img && cvHeadlineEl.value.trim() === '' && (cvState.style !== 's3l' || cvKickerEl.value.trim() === '') && (cvState.style !== 'brk' || cvSourceEl.value.trim() === ''));
@@ -2290,7 +2312,7 @@
         if (cvState.style === 's02'){
             const f = cvLayoutHeadline(tokens, boxW, 96, 40, allBold);
             const nL2 = Math.max(f.lines.length, 1);
-            const y0 = isSquare ? (Math.round((CVH - (f.fs + (nL2 - 1) * f.lh + 30)) / 2) + f.fs) : (150 + f.fs);
+            const y0 = isSquare ? (Math.round((CVH - (f.fs + (nL2 - 1) * f.lh + 30)) / 2) + f.fs) : (150 + topPad + f.fs);
             let accentDrawn = false, lastW = 0, lastY = y0;
             f.lines.forEach((ln, i) => {
                 const yy = y0 + i * f.lh;
@@ -2302,7 +2324,7 @@
         } else if (cvState.style === 's01'){
             const f = cvLayoutHeadline(tokens, boxW, 96, 40, allBold);
             const nL = Math.max(f.lines.length, 1);
-            const firstY = (CVH - 350) - (nL - 1) * f.lh;
+            const firstY = (CVH - 350 - botPad) - (nL - 1) * f.lh;
             let accentDrawn = false, firstW = 0;
             f.lines.forEach((ln, i) => {
                 const yy = firstY + i * f.lh;
@@ -2316,7 +2338,7 @@
             const tfPre = cvLayoutHeadline(tokens, boxW, 84, 40, allBold);
             const nT = Math.max(tfPre.lines.length, 1);
             const blockH3 = kf.fs + 56 + tfPre.fs + (nT - 1) * tfPre.lh;
-            const baseTop = isSquare ? Math.round((CVH - blockH3) / 2) : 140;
+            const baseTop = isSquare ? Math.round((CVH - blockH3) / 2) : (140 + topPad);
             const ky = baseTop + kf.fs; let kw = 0;
             if (kf.lines[0]) { cvCtx.font = '300 ' + kf.fs + 'px HNArabic'; cvCtx.fillStyle = '#fff'; cvCtx.textAlign = 'center'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'alphabetic'; cvCtx.fillText(kf.lines[0], cx, ky); kw = cvCtx.measureText(kf.lines[0]).width; }
             if (kf.lines[0]) cvAccent(cx, ky + 18, Math.min(Math.max(kw, 140), 480));
@@ -2328,15 +2350,18 @@
             const cmul = cvCardTextMul();
             const f = cvWrapTokens(tokens, bw, Math.round(80 * cmul), Math.round(44 * cmul), allBold, 6);
             const nL = Math.max(f.lines.length, 1);
-            const lastBaseline = CVH - 200;
+            const lastBaseline = CVH - 200 - botPad;
             const firstY = lastBaseline - (nL - 1) * f.lh;
             f.lines.forEach((ln, i) => cvDrawLineRightEdge(ln, rx, firstY + i * f.lh, f.fs, allBold));
             cvBadge(rx, firstY - f.fs - 28);
             const src = (demo ? CV_SAMPLE.brkSource : cvSourceEl.value).trim();
-            if (src) { cvCtx.font = '700 ' + Math.round(34 * cmul) + 'px HNArabic'; cvCtx.fillStyle = '#fff'; cvCtx.textAlign = 'right'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'alphabetic'; cvCtx.fillText(src, rx, CVH - 135); }
+            if (src) { cvCtx.font = '700 ' + Math.round(34 * cmul) + 'px HNArabic'; cvCtx.fillStyle = '#fff'; cvCtx.textAlign = 'right'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'alphabetic'; cvCtx.fillText(src, rx, CVH - 135 - botPad); }
         }
 
-        if (cvLogo.complete && cvLogo.naturalWidth) cvCtx.drawImage(cvLogo, 51, CVH - 51 - 63, 63, 63);
+        if (cvLogo.complete && cvLogo.naturalWidth) {
+            if (isStory) { cvCtx.save(); cvCtx.globalAlpha = 0.70; cvCtx.drawImage(cvLogo, 62, 1731, 79, 79); cvCtx.restore(); }   // AA story template
+            else cvCtx.drawImage(cvLogo, 51, CVH - 51 - 63, 63, 63);
+        }
 
         if (demo){
             cvCtx.save();
