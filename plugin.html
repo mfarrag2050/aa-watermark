@@ -202,6 +202,39 @@
         .order-chip:active { cursor: grabbing; }
         .order-chip .grip { font-size: 10px; opacity: .85; line-height: 1; }
 
+        /* ---- v2 additions ---- */
+        .opt-row { display:flex; gap:8px; align-items:center; margin-top:10px; font-size:12px; color:#444; }
+        .opt-row select, .opt-row input[type=text] {
+            flex:1; padding:7px 9px; border-radius:8px; border:1px solid #d6dae6; font-family:inherit; font-size:12px; background:#fff;
+        }
+        .opt-row select { flex:0 0 auto; }
+        #boardTitle { direction: rtl; }
+        .warn-badge {
+            position:absolute; left:50%; transform:translateX(-50%); bottom:-44px; z-index:2;
+            padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:600; white-space:nowrap;
+        }
+        .warn-badge.lowres { background:#fff4e5; color:#b45309; }
+        .warn-badge.dup { background:#fde8f1; color:#be185d; }
+        .warn-badge.both { bottom:-44px; }
+        .info-chip {
+            position:absolute; top:-6px; right:20px; z-index:3; width:22px; height:22px; border-radius:50%;
+            background:#111827; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center;
+            cursor:help; box-shadow:0 2px 6px rgba(0,0,0,.25);
+        }
+        #thumbnailContainer.has-warn { row-gap: 52px; }
+        #captionBar {
+            display:none; margin-top:14px; width:90%; max-width:560px; max-height:22vh; overflow:auto;
+            background:rgba(255,255,255,.96); color:#111; border-radius:10px; padding:10px 12px;
+            font-size:12.5px; line-height:1.6; direction:auto; text-align:start; z-index:1000;
+        }
+        #captionBar .cap-head { font-weight:700; margin-bottom:4px; }
+        #captionBar .cap-meta { color:#6b7280; font-size:11px; margin-top:6px; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+        #captionBar button { margin:0; width:auto; padding:4px 10px; font-size:11px; border-radius:7px; background:#111827; }
+        #warnSummary {
+            display:none; margin-top:12px; padding:8px 11px; border-radius:10px;
+            background:#fff4e5; color:#92400e; font-size:12px; font-weight:500; line-height:1.5;
+        }
+
         #gifHint {
             display: none; margin-top: 14px; padding: 8px 11px; border-radius: 10px;
             background: #eef4ff; color: #1a5ed8; font-size: 12px; font-weight: 500; line-height: 1.4;
@@ -211,7 +244,7 @@
 
 <body>
 
-    <h1>AA Logo Watermark <span class="sub">· Photopea</span></h1>
+    <h1>AA Logo Watermark <span class="sub">· Photopea · v2</span></h1>
 
     <div class="pp-row" id="ppRow">
         <button class="pp-btn" id="importBtn" title="Photopea'da açık olan görseli buraya al">⤵ Görseli al</button>
@@ -222,6 +255,7 @@
         <option value="1080x1080">1080 x 1080 (Kare)</option>
         <option value="1080x1350">1080 x 1350 (Dikey)</option>
         <option value="978x548">978 x 548 (Yatay)</option>
+        <option value="1080x1920">1080 x 1920 (Story)</option>
     </select>
 
     <div id="drop-zone">
@@ -242,10 +276,33 @@
         <label class="checkbox-container">
             <input type="checkbox" id="openInPpCheckbox" /> Sonucu Photopea'da aç
         </label>
+        <label class="checkbox-container" title="Her görsel Instagram (1080x1350), X (1080x1080) ve Story (1080x1920) boyutlarında, klasörlere ayrılmış tek ZIP olarak iner">
+            <input type="checkbox" id="allSizesCheckbox" /> Tüm boyutlar (Instagram + X + Story)
+        </label>
+        <label class="checkbox-container" title="Tüm çıktıları tek bir görselde toplar — masaya onay için göndermek üzere">
+            <input type="checkbox" id="boardCheckbox" /> Onay panosu oluştur
+        </label>
+    </div>
+
+    <div class="opt-row" id="boardRow" style="display:none">
+        <input type="text" id="boardTitle" placeholder="Pano başlığı (isteğe bağlı) — örn. للاعتماد: ..." />
+    </div>
+    <div class="opt-row" id="gifDelayRow" style="display:none">
+        GIF kare süresi:
+        <select id="gifDelay">
+            <option value="1000">1 sn</option>
+            <option value="1500">1.5 sn</option>
+            <option value="1800">1.8 sn</option>
+            <option value="2000" selected>2 sn</option>
+            <option value="2500">2.5 sn</option>
+            <option value="3000">3 sn</option>
+        </select>
     </div>
 
     <button id="processBtn">Logo Ekle ve İndir</button>
     <div id="status"></div>
+
+    <div id="warnSummary"></div>
 
     <div id="gifHint">🎞️ GIF karesi sırası: numaralı tutamağı (⠿) sürükleyin — 1 ilk kare, 2 ikinci…</div>
 
@@ -269,6 +326,7 @@
             <button id="undoCropBtn">Geri Al</button>
             <div id="nextBtn" class="preview-btn">&#10095;</div>
         </div>
+        <div id="captionBar"></div>
     </div>
 
     <script src="jszip.min.js"></script>
@@ -297,6 +355,21 @@
     const leftLogoCheckbox = document.getElementById("leftLogoCheckbox");
     const statusEl = document.getElementById("status");
     const logoWarn = document.getElementById("logoWarn");
+    const allSizesCheckbox = document.getElementById("allSizesCheckbox");
+    const boardCheckbox = document.getElementById("boardCheckbox");
+    const boardRow = document.getElementById("boardRow");
+    const boardTitle = document.getElementById("boardTitle");
+    const gifDelayRow = document.getElementById("gifDelayRow");
+    const gifDelay = document.getElementById("gifDelay");
+    const warnSummary = document.getElementById("warnSummary");
+    const captionBar = document.getElementById("captionBar");
+
+    // Sizes exported together by "Tüm boyutlar"
+    const ALL_SIZES = [
+        { w: 1080, h: 1350, folder: "Instagram_1080x1350" },
+        { w: 1080, h: 1080, folder: "X_1080x1080" },
+        { w: 1080, h: 1920, folder: "Story_1080x1920" }
+    ];
 
     const previewModal = document.getElementById("previewModal");
     const closeModalBtn = document.getElementById("closeModalBtn");
@@ -332,6 +405,22 @@
     leftLogoCheckbox.addEventListener('change', function () {
         try { localStorage.setItem('aa_leftLogoEnabled', this.checked); } catch (e) {}
     });
+
+    /* ---------- v2 option states ---------- */
+    try {
+        const d = localStorage.getItem('aa_gifDelay'); if (d) gifDelay.value = d;
+        if (localStorage.getItem('aa_board') === 'true') boardCheckbox.checked = true;
+    } catch (e) {}
+    gifDelay.addEventListener('change', () => { try { localStorage.setItem('aa_gifDelay', gifDelay.value); } catch (e) {} });
+    function syncOptionRows() {
+        boardRow.style.display = boardCheckbox.checked ? "flex" : "none";
+        gifDelayRow.style.display = gifCheckbox.checked ? "flex" : "none";
+    }
+    boardCheckbox.addEventListener('change', () => {
+        try { localStorage.setItem('aa_board', boardCheckbox.checked); } catch (e) {}
+        syncOptionRows();
+    });
+    allSizesCheckbox.addEventListener('change', () => decorateThumbs());
 
     dimensionSelect.addEventListener("change", () => {
         for (let i = 0; i < selectedFiles.length; i++) {
@@ -424,6 +513,7 @@
         });
 
         updateGifHint();
+        decorateThumbs();
 
         if (selectedFiles.length > 0 && !sortableInstance) {
             sortableInstance = new Sortable(thumbnailContainer, {
@@ -447,7 +537,8 @@
     function updateGifHint() {
         gifHint.style.display = (selectedFiles.length > 1 && gifCheckbox.checked) ? "block" : "none";
     }
-    gifCheckbox.addEventListener("change", updateGifHint);
+    gifCheckbox.addEventListener("change", () => { updateGifHint(); syncOptionRows(); });
+    syncOptionRows();
 
     /* ============================ CROP EDITOR ============================ */
     let boxWidth, boxHeight, boxLeft, boxTop, imgWidth, imgHeight;
@@ -509,6 +600,7 @@
     function openPreview(index) { currentIndex = index; updatePreview(); previewModal.style.display = "flex"; }
 
     function updatePreview() {
+        showCaption(selectedFiles[currentIndex]);
         const isCropped = selectedFiles[currentIndex].isCropped;
         if (undoCropBtn) undoCropBtn.style.display = isCropped ? "block" : "none";
         const reader = new FileReader();
@@ -712,9 +804,11 @@
         if (isGifMode) {
             processBtn.innerText = "İşleniyor (Fotoğraflar)...";
             const gif = new window.GIF({ workers: 2, quality: 10, workerScript: 'gif.worker.js' });
+            const gifFrames = [];
             for (let i = 0; i < selectedFiles.length; i++) {
                 const canvas = await processImage(selectedFiles[i], cropDataArray[i], true);
-                gif.addFrame(canvas, { delay: 2000 });
+                gif.addFrame(canvas, { delay: parseInt(gifDelay.value, 10) || 2000 });
+                gifFrames.push(canvas);
             }
             processBtn.innerText = "GIF Oluşturuluyor...";
             gif.on('finished', async function (blob) {
@@ -726,14 +820,58 @@
                     downloadBlob(blob, firstFilename + ".gif");
                     setStatus("GIF indirildi ✓");
                 }
+                if (boardCheckbox.checked) {
+                    const d = gifFrames[0] ? { w: gifFrames[0].width, h: gifFrames[0].height } : getTargetDimensions();
+                    const board = await makeBoard([{ label: `GIF kareleri (${d.w}×${d.h}) – ${(parseInt(gifDelay.value,10)/1000)} sn`, items: gifFrames }]);
+                    if (openInPp && inPhotopea) await openBlobInPhotopea(board); else downloadBlob(board, "Onay-Panosu.jpg");
+                }
                 resetAfterProcess(originalText);
             });
             gif.render();
             return;
         }
 
+        /* -------- All sizes mode (Instagram + X + Story) -------- */
+        if (allSizesCheckbox.checked) {
+            const cur = getTargetDimensions();
+            const out = [];       // {folder, name, blob, canvas}
+            let n = 0;
+            for (const sz of ALL_SIZES) {
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const f = selectedFiles[i];
+                    const same = (sz.w === cur.w && sz.h === cur.h);
+                    // a crop made for the selected size only applies to that size; other sizes use the original, center-cropped
+                    const src = same ? f : (f.originalFile || f);
+                    const crop = same ? cropDataArray[i] : null;
+                    const r = await processImage(src, crop, false, { w: sz.w, h: sz.h });
+                    out.push(Object.assign({ folder: sz.folder }, r));
+                    n++; setStatus(`İşleniyor... ${n}/${selectedFiles.length * ALL_SIZES.length}`);
+                }
+            }
+            let board = null;
+            if (boardCheckbox.checked) {
+                board = await makeBoard(ALL_SIZES.map(sz => ({
+                    label: `${sz.folder.replace('_', ' ')}`,
+                    items: out.filter(o => o.folder === sz.folder).map(o => o.canvas)
+                })));
+            }
+            if (openInPp && inPhotopea) {
+                for (const r of out) await openBlobInPhotopea(r.blob);
+                if (board) await openBlobInPhotopea(board);
+                setStatus(`${out.length} görsel Photopea'da açıldı ✓`);
+            } else {
+                const zip = new JSZip();
+                out.forEach(r => zip.folder(r.folder).file(r.name, r.blob));
+                if (board) zip.file("Onay-Panosu.jpg", board);
+                downloadBlob(await zip.generateAsync({ type: "blob" }), "Logolu-Tum-Boyutlar.zip");
+                setStatus(`${out.length} görsel (3 boyut) ZIP olarak indirildi ✓`);
+            }
+            resetAfterProcess(originalText);
+            return;
+        }
+
         /* -------- Normal mode -------- */
-        const results = [];       // {name, blob}
+        const results = [];       // {name, blob, canvas}
         const CONCURRENCY = 8;
         for (let i = 0; i < selectedFiles.length; i += CONCURRENCY) {
             const chunkFiles = selectedFiles.slice(i, i + CONCURRENCY);
@@ -745,14 +883,21 @@
             setStatus(`İşleniyor... ${Math.min(i + CONCURRENCY, selectedFiles.length)}/${selectedFiles.length}`);
         }
 
+        let board = null;
+        if (boardCheckbox.checked) {
+            const d = results[0] ? { w: results[0].canvas.width, h: results[0].canvas.height } : getTargetDimensions();
+            board = await makeBoard([{ label: `${results.length} görsel (${d.w}×${d.h})`, items: results.map(r => r.canvas) }]);
+        }
         if (openInPp && inPhotopea) {
             for (const r of results) { await openBlobInPhotopea(r.blob); }
+            if (board) await openBlobInPhotopea(board);
             setStatus(`${results.length} görsel Photopea'da açıldı ✓`);
         } else if (results.length === 1) {
             downloadBlob(results[0].blob, results[0].name);
+            if (board) downloadBlob(board, "Onay-Panosu.jpg");
             setStatus("İndirildi ✓");
         } else {
-            await downloadAsZip(results);
+            await downloadAsZip(results, board);
             setStatus(`${results.length} görsel ZIP olarak indirildi ✓`);
         }
         resetAfterProcess(originalText);
@@ -765,19 +910,21 @@
         fileInput.value = "";
         gifCheckbox.checked = false;
         gifHint.style.display = "none";
+        warnSummary.style.display = "none";
+        syncOptionRows();
         processBtn.innerText = originalText;
         processBtn.disabled = false;
     }
 
     // returnCanvas=true -> returns the finished <canvas> (for GIF frames)
     // otherwise -> returns { name, blob }
-    async function processImage(file, cropData, returnCanvas = false) {
+    async function processImage(file, cropData, returnCanvas = false, dimsOverride = null) {
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = function (event) {
                 const img = new Image();
                 img.onload = async function () {
-                    let dims = getTargetDimensions();
+                    let dims = dimsOverride || getTargetDimensions();
                     let targetW = dims.w, targetH = dims.h;
                     if (img.width <= 864 && img.height <= 486) { targetW = img.width; targetH = img.height; }
 
@@ -825,6 +972,7 @@
                     // pick the logo variant by final canvas size
                     let currentLogo = cachedLogo;
                     let is978x548 = false;
+                    const isStory = (canvas.width === 1080 && canvas.height === 1920);
                     if ((dims.w === 864 && dims.h === 486) || (canvas.width === 864 && canvas.height === 486)) {
                         currentLogo = cachedLogo486;
                     } else if ((dims.w === 978 && dims.h === 548) || (canvas.width === 978 && canvas.height === 548)) {
@@ -834,6 +982,17 @@
 
                     const isLeftLogo = document.getElementById("leftLogoCheckbox").checked;
                     let x, y;
+                    if (isStory) {
+                        // AA story templates: 79px mark, 62px side margin, 110px from the bottom (clear of the reply bar)
+                        const lw = 79, lh = Math.round(79 * currentLogo.height / currentLogo.width);
+                        x = isLeftLogo ? 62 : canvas.width - lw - 62;
+                        y = canvas.height - lh - 110;
+                        ctx.drawImage(currentLogo, x, y, lw, lh);
+                        if (returnCanvas) { resolve(canvas); return; }
+                        const outT = (file.type && file.type !== "application/octet-stream") ? file.type : "image/jpeg";
+                        canvas.toBlob(function (blob) { resolve({ name: logoluName(file.name || "gorsel.jpg"), blob, canvas }); }, outT, 0.95);
+                        return;
+                    }
                     if (is978x548) {
                         x = isLeftLogo ? 50 : canvas.width - currentLogo.width - 50;
                         y = canvas.height - currentLogo.height - 38;
@@ -847,7 +1006,7 @@
 
                     const outType = (file.type && file.type !== "application/octet-stream") ? file.type : "image/jpeg";
                     canvas.toBlob(function (blob) {
-                        resolve({ name: logoluName(file.name || "gorsel.jpg"), blob });
+                        resolve({ name: logoluName(file.name || "gorsel.jpg"), blob, canvas });
                     }, outType, 0.95);
                 };
                 img.src = event.target.result;
@@ -873,12 +1032,218 @@
         setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
 
-    async function downloadAsZip(results) {
+    async function downloadAsZip(results, board = null) {
         const zip = new JSZip();
         const folder = zip.folder("Logolu Fotoğraflar");
         results.forEach(r => folder.file(r.name, r.blob));
+        if (board) folder.file("Onay-Panosu.jpg", board);
         const content = await zip.generateAsync({ type: "blob" });
         downloadBlob(content, "Logolu-Fotograflar.zip");
+    }
+
+    /* ============================ PHOTO INFO (IPTC) + QUALITY CHECKS ============================ */
+    // Per-file analysis, keyed by the original File so it survives cropping.
+    const fileInfo = new Map();     // File -> { w, h, iptc:{headline,caption,byline,credit}, hash:Uint8Array(64) }
+    const keyOf = (f) => (f && f.originalFile) || f;
+
+    // Read IPTC-IIM from a JPEG's APP13 (Photoshop 3.0 / 8BIM 0x0404). AA photos carry
+    // the caption (2:120), headline (2:105), photographer (2:80) and credit (2:110) here.
+    function parseIPTC(buf) {
+        const out = {};
+        const b = new Uint8Array(buf);
+        if (b[0] !== 0xFF || b[1] !== 0xD8) return out;
+        const td = new TextDecoder("utf-8", { fatal: false });
+        let i = 2;
+        while (i + 4 < b.length) {
+            if (b[i] !== 0xFF) break;
+            const marker = b[i + 1];
+            if (marker === 0xDA || marker === 0xD9) break;           // start of scan / end
+            const len = (b[i + 2] << 8) | b[i + 3];
+            if (marker === 0xED) {                                     // APP13
+                const seg = b.subarray(i + 4, i + 2 + len);
+                const sig = td.decode(seg.subarray(0, 13));
+                if (sig.startsWith("Photoshop 3.0")) {
+                    let j = 14;
+                    while (j + 12 < seg.length) {
+                        if (seg[j] !== 0x38 || seg[j + 1] !== 0x42 || seg[j + 2] !== 0x49 || seg[j + 3] !== 0x4D) break; // 8BIM
+                        const id = (seg[j + 4] << 8) | seg[j + 5];
+                        let nlen = seg[j + 6]; let k = j + 7 + nlen; if ((nlen + 1) % 2) k++;
+                        const size = (seg[k] << 24) | (seg[k + 1] << 16) | (seg[k + 2] << 8) | seg[k + 3];
+                        const data = seg.subarray(k + 4, k + 4 + size);
+                        if (id === 0x0404) readIIM(data, out, td);
+                        j = k + 4 + size + (size % 2);
+                    }
+                }
+            }
+            i += 2 + len;
+        }
+        // AA captions end with "( Photographer - وكالة الأناضول )" when 2:80 is empty
+        if (!out.byline && out.caption) {
+            const m = out.caption.match(/\(\s*([^()]+?)\s+-\s+[^()]*\)\s*$/);
+            if (m) out.byline = m[1].trim();
+        }
+        return out;
+    }
+    function readIIM(d, out, td) {
+        const map = { 105: "headline", 120: "caption", 80: "byline", 110: "credit", 5: "objectName", 90: "city", 101: "country", 55: "date" };
+        let p = 0;
+        while (p + 5 <= d.length) {
+            if (d[p] !== 0x1C) { p++; continue; }
+            const rec = d[p + 1], ds = d[p + 2];
+            let len = (d[p + 3] << 8) | d[p + 4], start = p + 5;
+            if (len & 0x8000) {                                        // extended length
+                const n = len & 0x7FFF; len = 0;
+                for (let q = 0; q < n; q++) len = (len << 8) | d[start + q];
+                start += n;
+            }
+            if (rec === 2 && map[ds]) {
+                const v = td.decode(d.subarray(start, start + len)).replace(/\u0000/g, "").trim();
+                if (v) out[map[ds]] = out[map[ds]] ? out[map[ds]] + " · " + v : v;
+            }
+            p = start + len;
+        }
+    }
+
+    // 64-bit difference hash: robust to resizing / recompression, flags near-duplicate shots.
+    function dHash(bitmap) {
+        const c = document.createElement("canvas"); c.width = 9; c.height = 8;
+        const x = c.getContext("2d", { willReadFrequently: true });
+        x.drawImage(bitmap, 0, 0, 9, 8);
+        const px = x.getImageData(0, 0, 9, 8).data, g = [];
+        for (let k = 0; k < px.length; k += 4) g.push(px[k] * 0.299 + px[k + 1] * 0.587 + px[k + 2] * 0.114);
+        const h = new Uint8Array(64);
+        for (let r = 0; r < 8; r++) for (let col = 0; col < 8; col++) h[r * 8 + col] = g[r * 9 + col] > g[r * 9 + col + 1] ? 1 : 0;
+        return h;
+    }
+    const hamming = (a, b) => { let n = 0; for (let k = 0; k < 64; k++) n += a[k] !== b[k]; return n; };
+    const DUP_THRESHOLD = 10;   // of 64 bits
+
+    async function analyze(file) {
+        const key = keyOf(file);
+        if (fileInfo.has(key)) return fileInfo.get(key);
+        const info = { w: 0, h: 0, iptc: {}, hash: null };
+        fileInfo.set(key, info);
+        try {
+            const buf = await key.arrayBuffer();
+            try { info.iptc = parseIPTC(buf); } catch (e) {}
+            const bmp = await createImageBitmap(new Blob([buf], { type: key.type || "image/jpeg" }));
+            info.w = bmp.width; info.h = bmp.height;
+            info.hash = dHash(bmp);
+            bmp.close && bmp.close();
+        } catch (e) {}
+        return info;
+    }
+
+    // Would this image be enlarged for the given output size? (cover crop, or the user's crop box)
+    function isUpscaled(info, idx, dims) {
+        if (!info.w) return false;
+        if (info.w <= 864 && info.h <= 486) return false;          // small AA photos keep their native size
+        let srcW;
+        const cd = cropDataArray[idx];
+        const cur = getTargetDimensions();
+        if (cd && cd.boxWidth && dims.w === cur.w && dims.h === cur.h) srcW = cd.boxWidth * info.w / cd.imgWidth;
+        else srcW = (info.w / info.h > dims.w / dims.h) ? info.h * dims.w / dims.h : info.w;
+        return srcW < dims.w * 0.98;
+    }
+
+    let decorateToken = 0;
+    async function decorateThumbs() {
+        const token = ++decorateToken;
+        const files = selectedFiles.slice();
+        const infos = [];
+        for (const f of files) infos.push(await analyze(f));
+        if (token !== decorateToken) return;                       // a newer render superseded this one
+
+        const sizes = allSizesCheckbox.checked ? ALL_SIZES : [getTargetDimensions()];
+        const dupOf = files.map(() => []);
+        for (let a = 0; a < infos.length; a++) for (let b = a + 1; b < infos.length; b++) {
+            if (infos[a].hash && infos[b].hash && hamming(infos[a].hash, infos[b].hash) <= DUP_THRESHOLD) {
+                dupOf[a].push(b + 1); dupOf[b].push(a + 1);
+            }
+        }
+        let nLow = 0, nDup = 0, anyWarn = false;
+        const wrappers = thumbnailContainer.children;
+        files.forEach((f, i) => {
+            const w = wrappers[i]; if (!w) return;
+            w.querySelectorAll(".warn-badge,.info-chip").forEach(el => el.remove());
+            const info = infos[i];
+            const low = sizes.filter(d => isUpscaled(info, i, d)).map(d => `${d.w}×${d.h}`);
+            const msgs = [];
+            if (low.length) { nLow++; msgs.push({ cls: "lowres", t: `Düşük çözünürlük (${info.w}×${info.h})`, tip: "Bu boyutlarda büyütülecek: " + low.join(", ") }); }
+            if (dupOf[i].length) { msgs.push({ cls: "dup", t: "Benzer: #" + dupOf[i].join(", #"), tip: "Bu kareye çok benzeyen görseller var" }); }
+            if (msgs.length) {
+                anyWarn = true;
+                const m = msgs.length === 2 ? { cls: "lowres", t: msgs[0].t.split(" (")[0] + " · " + msgs[1].t, tip: msgs[0].tip + " — " + msgs[1].tip } : msgs[0];
+                const el = document.createElement("div"); el.className = "warn-badge " + m.cls; el.textContent = "⚠ " + m.t; el.title = m.tip;
+                w.appendChild(el);
+            }
+            const ip = info.iptc || {};
+            if (ip.caption || ip.headline) {
+                const chip = document.createElement("div"); chip.className = "info-chip"; chip.textContent = "i";
+                chip.title = [ip.headline, ip.caption, ip.byline ? "📷 " + ip.byline : ""].filter(Boolean).join("\n\n");
+                chip.addEventListener("click", (ev) => { ev.stopPropagation(); openPreview(i); });
+                w.appendChild(chip);
+            }
+        });
+        nDup = dupOf.filter(x => x.length).length;
+        thumbnailContainer.classList.toggle("has-warn", anyWarn);
+        const parts = [];
+        if (nLow) parts.push(`${nLow} görsel düşük çözünürlüklü (büyütülecek)`);
+        if (nDup) parts.push(`${nDup} görsel birbirine çok benziyor — aynı kare tekrar etmesin`);
+        warnSummary.innerHTML = parts.length ? "⚠️ " + parts.join("<br>⚠️ ") : "";
+        warnSummary.style.display = parts.length ? "block" : "none";
+    }
+
+    async function showCaption(file) {
+        const info = await analyze(file);
+        const ip = info.iptc || {};
+        if (!ip.caption && !ip.headline) { captionBar.style.display = "none"; return; }
+        captionBar.innerHTML = "";
+        if (ip.headline) { const h = document.createElement("div"); h.className = "cap-head"; h.textContent = ip.headline; captionBar.appendChild(h); }
+        if (ip.caption) { const c = document.createElement("div"); c.textContent = ip.caption; captionBar.appendChild(c); }
+        const meta = document.createElement("div"); meta.className = "cap-meta";
+        const date = ip.date && /^\d{8}$/.test(ip.date) ? `${ip.date.slice(6, 8)}.${ip.date.slice(4, 6)}.${ip.date.slice(0, 4)}` : "";
+        const who = document.createElement("span");
+        who.textContent = [ip.byline && "📷 " + ip.byline, ip.city, date && "🗓 " + date, info.w && `${info.w}×${info.h}`].filter(Boolean).join(" · ");
+        who.title = "Çekim tarihi haberden eskiyse fotoğraf arşivdendir";
+        const btn = document.createElement("button"); btn.textContent = "Kopyala";
+        btn.onclick = (ev) => { ev.stopPropagation(); navigator.clipboard && navigator.clipboard.writeText([ip.headline, ip.caption].filter(Boolean).join("\n")).then(() => { btn.textContent = "Kopyalandı ✓"; }); };
+        meta.appendChild(who); meta.appendChild(btn); captionBar.appendChild(meta);
+        captionBar.style.display = "block";
+    }
+
+    /* ============================ APPROVAL BOARD ============================ */
+    // One JPEG with every output, numbered right-to-left, for the desk to approve.
+    async function makeBoard(groups, title) {
+        title = (title !== undefined ? title : boardTitle.value).trim();
+        const W = 2000, M = 40, G = 12;
+        const font = (sz, wt) => `${wt || 600} ${sz}px Tahoma, "Segoe UI", Arial, sans-serif`;
+        const layout = groups.filter(g => g.items.length).map(g => {
+            const r = g.items[0].width / g.items[0].height;
+            const cols = r > 1.2 ? 3 : (r < 0.6 ? 6 : 4);
+            const tw = (W - 2 * M - (cols - 1) * G) / cols, th = tw / r;
+            const rows = Math.ceil(g.items.length / cols);
+            return { g, cols, tw, th, rows, h: 46 + rows * th + (rows - 1) * G };
+        });
+        let H = M + (title ? 70 : 0) + layout.reduce((a, l) => a + l.h + 30, 0) + M - 30;
+        const c = document.createElement("canvas"); c.width = W; c.height = Math.max(200, Math.round(H));
+        const x = c.getContext("2d");
+        x.fillStyle = "#f2f0ec"; x.fillRect(0, 0, c.width, c.height);
+        x.direction = "rtl"; x.textAlign = "right"; x.textBaseline = "alphabetic";
+        let y = M;
+        if (title) { x.fillStyle = "#111"; x.font = font(42, 700); x.fillText(title, W - M, y + 44); y += 70; }
+        for (const l of layout) {
+            x.fillStyle = "#555"; x.font = font(26, 500); x.fillText(l.g.label, W - M, y + 30); y += 46;
+            l.g.items.forEach((it, k) => {
+                const r = Math.floor(k / l.cols), col = k % l.cols;
+                const px = W - M - (col + 1) * l.tw - col * G, py = y + r * (l.th + G);
+                x.drawImage(it, px, py, l.tw, l.th);
+                x.fillStyle = "rgba(17,17,17,.78)"; x.beginPath(); x.arc(px + l.tw - 22, py + 22, 16, 0, Math.PI * 2); x.fill();
+                x.fillStyle = "#fff"; x.font = font(16, 700); x.textAlign = "center"; x.fillText(String(k + 1), px + l.tw - 22, py + 28); x.textAlign = "right";
+            });
+            y += l.rows * l.th + (l.rows - 1) * G + 30;
+        }
+        return await new Promise(res => c.toBlob(res, "image/jpeg", 0.9));
     }
 
     /* ============================ PHOTOPEA BRIDGE ============================ */
