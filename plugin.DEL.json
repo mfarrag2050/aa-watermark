@@ -1,0 +1,11 @@
+{
+  "environment": {
+    "plugins": [
+      {
+        "name": "AA Logo Watermark",
+        "url": "https://aaoperationai.github.io/aa-watermark/plugin.html",
+        "icon": "https://aaoperationai.github.io/aa-watermark/icon.png"
+      }
+    ]
+  }
+}

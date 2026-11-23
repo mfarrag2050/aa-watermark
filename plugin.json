@@ -2,9 +2,9 @@
   "environment": {
     "plugins": [
       {
-        "name": "AA Logo Watermark",
-        "url": "https://mfarrag2050.github.io/aa-watermark/plugin.html",
-        "icon": "https://mfarrag2050.github.io/aa-watermark/icon.png"
+        "name": "AA Media Kit",
+        "url": "https://aa-mediakit.pages.dev/plugin.html",
+        "icon": "https://aa-mediakit.pages.dev/icon.png"
       }
     ]
   }

@@ -1,81 +1,60 @@
-# AA Logo Watermark — إضافة Photopea
+# AA Media Kit — Photopea
 
-نسخة من إضافة كروم «AA Logo Watermark» تعمل **داخل [photopea.com](https://www.photopea.com)** كلوحة جانبية (Plugin)، لإرسالها للفريق. تعطي **نفس المخرجات بالضبط** (نفس المقاسات، نفس القص المركزي cover، نفس معالجة pica + unsharp، ونفس موضع الشعار).
-
-> ✅ **الشعار مدمج داخل `plugin.html`** (base64) — الإضافة مكتفية ذاتياً، لا حاجة لمجلد `assets/` ولا لاستضافة الشعار بشكل منفصل.
+**Aç / افتح / Open:** [Photopea + eklenti](https://www.photopea.com#%7B%22environment%22%3A%7B%22plugins%22%3A%5B%7B%22name%22%3A%22AA%20Media%20Kit%22%2C%22url%22%3A%22https%3A//aa-mediakit.pages.dev/plugin.html%22%2C%22icon%22%3A%22https%3A//aa-mediakit.pages.dev/icon.png%22%7D%5D%7D%7D) → sağ paneldeki **AA Logo Watermark** düğmesine bas.
 
 ---
 
-## محتويات المجلد
+## 🇸🇦 العربية — طريقة الاستخدام
 
-```
-aa-watermark/
-├── plugin.html        ← اللوحة نفسها + الشعارات مدمجة (الملف الرئيسي)
-├── plugin.json        ← تعريف الإضافة لـ Photopea
-├── icon.png           ← أيقونة الإضافة (استبدلها بشعار AA إن أردت)
-├── jszip.min.js
-├── pica.min.js
-├── gif.js
-├── gif.worker.js
-├── Sortable.min.js
-└── launch-link.txt    ← رابط تركيب بضغطة واحدة
-```
+1. **أضف الصور** بإحدى الطرق: زر **⤵ Görseli al** (يسحب الصورة المفتوحة حالياً في Photopea)، أو اسحب الصور، أو اضغط لاختيارها، أو ارفع ملف **ZIP**.
+2. **اختر المقاس:** `1080×720` / `1080×1080` / `1080×1350` / `978×548`.
+3. **الخيارات:** **GIF olarak indir** (إخراج GIF) · **Logoyu sola yerleştir** (الشعار يساراً) · **Sonucu Photopea'da aç** (فتح الناتج داخل Photopea بدل التنزيل).
+4. **ترتيب صور الـ GIF:** اسحب المقبض المرقّم (⠿ 1، 2، 3…) أعلى يسار كل صورة لتغيير الترتيب. الضغط على جسم الصورة يفتح محرّر القص (زووم بالعجلة + سحب).
+5. اضغط **Logo Ekle ve İndir** لإضافة الشعار والتنزيل.
 
-الشعارات الثلاثة المدمجة تُختار تلقائياً حسب المقاس النهائي، وتُرسم بحجمها الأصلي في زاوية ثابتة (كما في إضافة كروم تماماً):
-
-| الشعار المدمج | يُستخدم مع | الإزاحة |
-|---|---|---|
-| AA-Logo (63×63) | 1080×720 / 1080×1080 / 1080×1350 | 53px |
-| AALogo (48×48) | 978×548 | 50px أفقي / 38px رأسي |
-| AA-Logo-486 (48×48) | 864×486 (للصور الصغيرة) | 53px |
-| AA-Logo مكبّر إلى 79×79 بشفافية 70% | 1080×1920 (ستوري) | أسفل اليسار عند (62، 1731) كقالب ستوري الأناضول المعتمد |
+**الإخراج:** صورة واحدة → تُنزَّل باسم `...-logolu`. عدة صور → ملف `Logolu-Fotograflar.zip`.
 
 ---
 
-## 1) الاستضافة (GitHub Pages)
+## 🇹🇷 Türkçe — Kullanım
 
-الإضافة تُحمَّل من رابط، لذا ارفع المجلد إلى GitHub Pages (نفس أسلوب خرائطك):
+1. **Fotoğrafları ekleyin:** **⤵ Görseli al** düğmesi (Photopea'da açık görseli çeker) veya fotoğrafları sürükleyin / tıklayarak seçin / **ZIP** yükleyin.
+2. **Boyutu seçin:** `1080×720` / `1080×1080` / `1080×1350` / `978×548`.
+3. **Seçenekler:** **GIF olarak indir** · **Logoyu sola yerleştir** · **Sonucu Photopea'da aç** (indirmek yerine sonucu Photopea'da açar).
+4. **GIF kare sırası:** Her fotoğrafın sol üstündeki numaralı tutamağı (⠿ 1, 2, 3…) sürükleyerek sırayı değiştirin. Görsele tıklamak kırpma editörünü açar (tekerlekle yakınlaştır + sürükle).
+5. **Logo Ekle ve İndir** düğmesine basın.
 
-1. أنشئ مستودعاً باسم مثل `aa-watermark` وفعّل GitHub Pages، أو ضعه داخل مستودعك الحالي.
-2. ارفع الملفات أعلاه كما هي (لا مجلد `assets/` — الشعارات بالداخل).
-3. سيصبح الرابط: `https://mfarrag2050.github.io/aa-watermark/plugin.html`
-
-> إن استخدمت مساراً مختلفاً، عدّل عنوان `url` و`icon` داخل `plugin.json`، وأعد توليد رابط التركيب.
-
----
-
-## 2) تركيب الإضافة في Photopea
-
-**الأسهل (رابط بضغطة واحدة):** افتح الرابط الموجود في `launch-link.txt` — يفتح Photopea والإضافة مركّبة تلقائياً. أرسل هذا الرابط للفريق.
-
-**يدوياً:**
-1. افتح [photopea.com](https://www.photopea.com) ثم `Window → Plugins`.
-2. اضغط **Add Plugin** بالأعلى، واختر ملف `plugin.json`.
-3. ستظهر الإضافة كزر على اللوحة اليمنى.
+**Çıktı:** Tek fotoğraf → `...-logolu` olarak iner. Birden fazla → `Logolu-Fotograflar.zip`.
 
 ---
 
-## 3) طريقة الاستخدام
+## 🇬🇧 English — How to use
 
-اضغط زر الإضافة على اليمين لفتح اللوحة، ثم:
+1. **Add photos:** **⤵ Görseli al** button (pulls the image currently open in Photopea), or drag photos / click to pick / upload a **ZIP**.
+2. **Choose size:** `1080×720` / `1080×1080` / `1080×1350` / `978×548`.
+3. **Options:** **GIF olarak indir** (export GIF) · **Logoyu sola yerleştir** (logo on the left) · **Sonucu Photopea'da aç** (open the result in Photopea instead of downloading).
+4. **GIF frame order:** Drag the numbered handle (⠿ 1, 2, 3…) at the top-left of each photo to reorder. Clicking the photo body opens the crop editor (wheel to zoom + drag).
+5. Press **Logo Ekle ve İndir** to stamp the logo and download.
 
-- **⤵ Görseli al** — يسحب الصورة المفتوحة حالياً في Photopea إلى الأداة (تقصّها/تعدّلها في Photopea أولاً ثم تسحبها).
-- أو اسحب الصور / اضغط لاختيارها / ارفع ملف **ZIP** مباشرة داخل اللوحة.
-- اختر المقاس: `1080×720` / `1080×1080` / `1080×1350` / `978×548` / `1080×1920`.
-- خيارات: **GIF olarak indir** (تصدير GIF)، **Logoyu sola yerleştir** (الشعار يساراً)، **Sonucu Photopea'da aç** (فتح الناتج في Photopea بدل التنزيل).
-- **ترتيب صور الـ GIF:** كل صورة عليها **مقبض مرقّم (⠿ 1، 2، 3…)** أعلى اليسار — اسحب المقبض لتغيير الترتيب (الرقم = ترتيب الإطار في الـ GIF). الضغط على جسم الصورة يفتح محرّر القص (زووم بالعجلة + سحب).
-- **Logo Ekle ve İndir** لإضافة الشعار والتنزيل.
+**Output:** One photo → downloads as `...-logolu`. Multiple → `Logolu-Fotograflar.zip`.
 
-**التنزيل:** صورة واحدة تُنزَّل مباشرة باسم `...-logolu`. أكثر من صورة تُجمَّع في ملف `Logolu-Fotograflar.zip`.
+---
+
+## الاستضافة
+
+- **الرابط الأساسي (Cloudflare Pages):** https://aa-mediakit.pages.dev/plugin.html — مشروع `aa-mediakit` مربوط بفرع `main` في هذا الريبو، فكل دفع يُنشر تلقائياً.
+- **نسخة GitHub Pages:** https://mfarrag2050.github.io/aa-watermark/plugin.html
+- رابط التركيب في Photopea بضغطة واحدة في `launch-link.txt`، وتعريف الإضافة في `plugin.json`.
+- نُقلت الأداة كاملة من `aaoperationai/aa-watermark` إلى هذا الريبو، بكل أقسامها: Watermark، Kartlar، Son dakika، Reels.
 
 ---
 
 ## الجديد في الإصدار 2
 
-أضفناها من خبرة العمل اليومي على ألبومات الأناضول وبطاقاتها. **المخرجات الافتراضية لم تتغير**: صورة بمقاس 1080×1350 تخرج مطابقة بكسلا بكسل للإصدار السابق. كل ميزة جديدة تعمل فقط عند تفعيلها.
+أضفناها من خبرة العمل اليومي على ألبومات الأناضول وبطاقاتها. **المخرجات الافتراضية لم تتغير**: صورة بمقاس 1080×1350 تخرج مطابقة بكسلا بكسل للإصدار السابق. كل الإضافات في قسم **Watermark**، والأقسام الأخرى لم تتغير. كل ميزة جديدة تعمل فقط عند تفعيلها.
 
 ### 1) مقاس الستوري والتصدير بكل المقاسات دفعة واحدة
-- مقاس جديد **1080 x 1920 (Story)**: الشعار وفق قالب ستوري الأناضول المعتمد: 79×79px عند الموضع (62، 1731) أسفل اليسار، بشفافية 70%، بعيدا عن شريط الرد في الستوري. خيار «Logoyu sola yerleştir» لا يؤثر في الستوري.
+- مقاس جديد **1080 x 1920 (Story)** في قسم Watermark: الشعار وفق قالب ستوري الأناضول المعتمد: 79×79px عند الموضع (62، 1731) أسفل اليسار، بشفافية 70%، بعيدا عن شريط الرد في الستوري. خيار «Logoyu sola yerleştir» لا يؤثر في الستوري.
 - خيار **Tüm boyutlar (Instagram + X + Story)**: كل صورة تخرج بالمقاسات الثلاثة في ZIP واحد باسم `Logolu-Tum-Boyutlar.zip`، فيه ثلاثة مجلدات:
   `Instagram_1080x1350/`، `X_1080x1080/`، `Story_1080x1920/`.
   القص اليدوي يُطبَّق على المقاس المختار في القائمة فقط، والمقاسات الأخرى تُقص من الأصل على المركز.
@@ -97,25 +76,3 @@ aa-watermark/
   - مع صورة واحدة أو GIF تُنزَّل منفصلة.
   - مع «Sonucu Photopea'da aç» تُفتح في Photopea.
 - **GIF kare süresi:** مدة الإطار من 1 إلى 3 ثوان، والافتراضي 2 كما كان. الاختيار يُحفظ في المتصفح.
-
----
-
-## الفروق عن إضافة كروم
-
-| الميزة | كروم | Photopea |
-|---|---|---|
-| المعالجة (مقاس/قص/pica/شعار) | ✅ | ✅ مطابقة تماماً |
-| الشعارات | ملفات في `assets/` | ✅ مدمجة داخل `plugin.html` |
-| محرّر القص، ZIP، GIF | ✅ | ✅ |
-| ترتيب الصور (لإطارات GIF) | ✅ مفتاح | ✅ مقبض مرقّم (⠿) دائم |
-| الحفظ في مجلد «Logolu Fotoğraflar» | ✅ مجلد على القرص | 📦 ملف ZIP بنفس الاسم |
-| جلب آخر التنزيلات (أزرار 1–9) | ✅ (خاص بكروم) | ❌ غير متاح للمتصفح |
-| **سحب الصورة المفتوحة من Photopea** | — | ✅ جديد |
-| **فتح الناتج داخل Photopea** | — | ✅ جديد |
-| **ستوري 1080×1920 وكل المقاسات دفعة واحدة** | — | ✅ v2 |
-| **كابشن IPTC وتنبيهات التكرار والدقة** | — | ✅ v2 |
-| **لوحة الاعتماد ومدة إطار GIF** | — | ✅ v2 |
-
-> لتغيير الشعار مستقبلاً: إمّا إعادة دمج ملفات جديدة داخل `plugin.html`، أو استخدام زر «رفع شعار بديل» في اللوحة (يُحفظ محلياً في المتصفح ويُستخدم لكل المقاسات — حل سريع فقط).
-
-الواجهة بقيت بالتركية كما في الأداة الأصلية ليعتادها الفريق؛ يمكن تغيير النصوص بسهولة داخل `plugin.html`.

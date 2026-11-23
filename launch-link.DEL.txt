@@ -1,0 +1,1 @@
+https://www.photopea.com#%7B%22environment%22%3A%7B%22plugins%22%3A%5B%7B%22name%22%3A%22AA%20Logo%20Watermark%22%2C%22url%22%3A%22https%3A//aaoperationai.github.io/aa-watermark/plugin.html%22%2C%22icon%22%3A%22https%3A//aaoperationai.github.io/aa-watermark/icon.png%22%7D%5D%7D%7D
