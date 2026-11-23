@@ -556,8 +556,8 @@
             </div>
             <div class="cv-slider-row" style="margin-top:8px">
               <span class="cv-slim" id="cvVidTextLbl">Text size</span>
-              <input type="range" id="cvVidTextSize" min="60" max="130" value="85" style="flex:1">
-              <span class="cv-slim" id="cvVidTextVal">85%</span>
+              <input type="range" id="cvVidTextSize" min="60" max="130" value="100" style="flex:1">
+              <span class="cv-slim" id="cvVidTextVal">100%</span>
             </div>
             <label class="checkbox-container" style="margin-top:10px"><input type="checkbox" id="cvVidMotion" checked> <span id="cvVidMotionLbl">Motion</span></label>
 
@@ -2227,6 +2227,33 @@
         return { total, accL, accR };
     }
     // Breaking wrap: alternating long / short / long lines, with comfortable leading
+    // cvWrapTokens + two AA line-breaking fixes for automatic breaks (manual Enter breaks are kept exactly as typed):
+    //  1) a line never ends with a preposition/particle — it moves down with the word it belongs to;
+    //  2) the last line never holds one word alone — the word before it moves down.
+    // Each move is made only if the receiving line still fits the box; the font size is not changed.
+    const AA_PARTICLES = new Set(['في','من','على','إلى','الى','عن','مع','منذ','حتى','نحو','لدى','عند','بين','و','أو','ثم','أن','إن','لا','لم','لن','قد','بعد','قبل','خلال','ضد']);
+    function aaWrapNoOrphan(tokens, boxW, maxFont, minFont, allBold, maxLines){
+        const f = cvWrapTokens(tokens, boxW, maxFont, minFont, allBold, maxLines);
+        if (tokens.some(x => x.br) || f.lines.length < 2) return f;
+        const L = f.lines.map(l => l.slice());
+        const fits = l => cvLineWidth(l, f.fs, allBold) <= boxW;
+        const plain = tk => String(tk.text || '').replace(/[*_]/g, '').trim();
+        for (let i = 0; i < L.length - 1; i++){
+            const ln = L[i];
+            if (ln.length >= 2 && AA_PARTICLES.has(plain(ln[ln.length - 1]))){
+                const cand = [ln[ln.length - 1]].concat(L[i + 1]);
+                if (fits(cand)){ L[i] = ln.slice(0, -1); L[i + 1] = cand; }
+            }
+        }
+        const n = L.length;
+        if (L[n - 1].length === 1 && L[n - 2].length >= 3){
+            let k = 1;   // also take a particle that would otherwise end the line above
+            while (L[n - 2].length - k >= 2 && AA_PARTICLES.has(plain(L[n - 2][L[n - 2].length - k - 1]))) k++;
+            const cand = L[n - 2].slice(-k).concat(L[n - 1]);
+            if (L[n - 2].length - k >= 1 && fits(cand)){ L[n - 2] = L[n - 2].slice(0, -k); L[n - 1] = cand; }
+        }
+        return { fs: f.fs, lines: L.filter(l => l.length), lh: f.lh };
+    }
     function cvWrapTokens(tokens, boxW, maxFont, minFont, allBold, maxLines){
         const shortRatio = 0.6, LEAD = 1.42;
         // Manual mode: the user placed line breaks (Enter) — respect them exactly
@@ -2510,7 +2537,7 @@
             const tokens = cvParseTokens(head);
             const rx = W - 71, bw = 900;
             const mul = (typeof cvVidTextMul === 'function') ? cvVidTextMul() : 0.85;
-            const f = cvWrapTokens(tokens, bw, Math.round(80 * mul), Math.round(44 * mul), allBold, 6);
+            const f = aaWrapNoOrphan(tokens, bw, Math.round(80 * mul), Math.round(44 * mul), allBold, 6);
             const nL = Math.max(f.lines.length, 1);
             const isStory = (H >= 1900), bot = isStory ? 180 : 0;   // 1080x1920: keep text above the Reels/Stories caption and reply bar
             const firstY = (H - 200 - bot) - (nL - 1) * f.lh;
@@ -2620,7 +2647,7 @@
         const allBold = document.getElementById('cvAllBold').checked;
         const mul = cvVidTextMul();
         const toks = cvParseTokens(raw).filter(t => !t.br);
-        const f = cvWrapTokens(toks, 900, Math.round(80 * mul), Math.round(44 * mul), allBold, 6);
+        const f = aaWrapNoOrphan(toks, 900, Math.round(80 * mul), Math.round(44 * mul), allBold, 6);
         const rebuild = ln => ln.map(t => (t.accent ? '_' : '') + ((t.bold && !allBold) ? '*' : '') + t.text + ((t.bold && !allBold) ? '*' : '') + (t.accent ? '_' : '')).join(' ');
         seg.headline = f.lines.map(rebuild).join('\n');
     }
@@ -2681,7 +2708,16 @@
         im.onload = () => { cvVidImg = im; cvVidImgCrop = null; document.getElementById('cvVidName').textContent = file.name; document.getElementById('cvVidImgCrop').hidden = false; document.getElementById('cvVidPlay').disabled = false; document.getElementById('cvVidReplay').disabled = false; document.getElementById('cvVidExport').disabled = false; cvVidPreviewStatic(); };
         im.src = cvVidImgURL;
     });
-    document.getElementById('cvVidSize').addEventListener('change', () => { const s = cvVidSizeObj(); cvVidCanvas.width = s.W; cvVidCanvas.height = s.H; cvVidPreviewStatic(); });
+    // default text size per output (100% for 1080x1920, 85% for X / Feed as before) until the user sets it by hand
+    let cvVidTextTouched = false;
+    function cvVidDefaultTextSize(){
+        if (cvVidTextTouched) return;
+        const v = (document.getElementById('cvVidSize').value === 'reel') ? 100 : 85;
+        document.getElementById('cvVidTextSize').value = v; document.getElementById('cvVidTextVal').textContent = v + '%';
+    }
+    document.getElementById('cvVidTextSize').addEventListener('input', () => { cvVidTextTouched = true; });
+    cvVidDefaultTextSize();
+    document.getElementById('cvVidSize').addEventListener('change', () => { const s = cvVidSizeObj(); cvVidCanvas.width = s.W; cvVidCanvas.height = s.H; cvVidDefaultTextSize(); cvVidPreviewStatic(); });
     document.getElementById('cvVidMotion').addEventListener('change', () => cvVidPreviewStatic());
     document.getElementById('cvVidStart').addEventListener('input', cvVidUpdateTrim);
     document.getElementById('cvVidEnd').addEventListener('input', cvVidUpdateTrim);
@@ -3156,10 +3192,11 @@
         const prev = cvCtx, pw = CVW, ph = CVH; cvCtx = ctx; CVW = W; CVH = H;
         try {
             const mul = rlMul();
-            const f = cvWrapTokens(cvParseTokens(txt), W - 150, Math.round(76 * mul), Math.round(40 * mul), true, 4);
+            const f = aaWrapNoOrphan(cvParseTokens(txt), W - 150, Math.round(76 * mul), Math.round(40 * mul), true, 4);
             const nL = Math.max(f.lines.length, 1);
             let firstY = Math.round(H * 0.66) - (nL - 1) * f.lh;
             if (minTop) firstY = Math.max(firstY, minTop + f.fs + 40);   // first clip shown whole: start the title under the picture
+            ctx.save(); ctx.globalAlpha = alpha; const gp = cvGradParams(); cvGradient('bottom', gp.op, gp.reach); ctx.restore();   // readability over bright footage
             ctx.save(); ctx.globalAlpha = alpha;
             ctx.shadowColor = 'rgba(20,30,68,.62)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 2;
             f.lines.forEach((ln, i) => cvDrawLineRightEdge(ln, W - 70, firstY + i * f.lh, f.fs, true));
