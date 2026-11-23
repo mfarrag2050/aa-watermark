@@ -312,6 +312,7 @@
         #cvPrevSq { aspect-ratio:1/1; }
         #cvPrevPt { aspect-ratio:1080/1440; }
         #cvPrevSt { aspect-ratio:1080/1920; max-width:240px; }
+        button.aa-cancel { background:#6b7280 !important; }
         #wmCardsHint { display:none; margin-top:8px; padding:8px 11px; border-radius:10px; background:#eef4ff; color:#1a5ed8; font-size:12px; line-height:1.5; }
         #wmCardsHint a { color:#1a5ed8; font-weight:700; cursor:pointer; text-decoration:underline; }
         .cv-preview-sticky { gap:18px; }
@@ -702,6 +703,8 @@
     <script src="pica.min.js"></script>
     <script src="gif.js"></script>
     <script src="Sortable.min.js"></script>
+    <script src="mp4-muxer.js"></script>
+    <script src="mp4box.all.min.js"></script>
     <script>
     /* =====================================================================
        AA Media Kit — Photopea plugin
@@ -802,7 +805,7 @@
         logo_upload:"Logo yükle",
         tab_w:"Watermark", tab_c:"Kartlar", tab_b:"Son dakika",
         cv_sec_brk:"Son dakika metni",
-        cv_vid_title:"Video (deneysel)", cv_vid_choose:"Video seç", cv_vid_size:"Boyut", cv_vid_motion:"Hareket", cv_vid_play:"Oynat", cv_vid_pause:"Duraklat", cv_vid_export:"Videoyu dışa aktar", cv_vid_rec:"Kaydediliyor…", cv_vid_done:"Video indirildi ✓", cv_vid_unsup:"Bu tarayıcı video dışa aktarmayı desteklemiyor",
+        cv_vid_title:"Video (deneysel)", cv_vid_choose:"Video seç", cv_vid_size:"Boyut", cv_vid_motion:"Hareket", cv_vid_play:"Oynat", cv_vid_pause:"Duraklat", cv_vid_export:"Videoyu dışa aktar", cv_vid_rec:"Kaydediliyor…", cv_vid_done:"Video indirildi ✓", cv_vid_unsup:"Bu tarayıcı video dışa aktarmayı desteklemiyor", vx_audio:"Ses hazırlanıyor…", vx_enc:"Video oluşturuluyor…", vx_cancel:"İptal", vx_cancelled:"İptal edildi", vx_opus:"Video indirildi ✓ — Not: bu tarayıcı AAC kodlayamıyor, ses Opus olarak kaydedildi (X kabul etmeyebilir).", vx_legacy:"Bu tarayıcıda hızlı MP4 kodlama yok; gerçek zamanlı kayda geçildi.",
         cv_mode_card:"Kart", cv_mode_video:"Video",
         cv_vid_seg:"Son dakika", cv_vid_add:"+ Son dakika ekle", cv_vid_seglbl:"Son dakika metinleri", cv_vid_grp_source:"Kaynak", cv_vid_grp_output:"Çıktı", cv_vid_textsize:"Metin boyutu", cv_vid_bghint:"Renk = kırmızı arka plan", cv_src_video:"Video", cv_src_image:"Görsel", cv_src_color:"Renk", cv_vid_choose_img:"Görsel seç", cv_vid_cropimg:"Görseli kırp", cv_suggest:"Satırları öner", cv_seg_imgadd:"Görsel ekle", cv_seg_imgchange:"Görseli değiştir", cv_suggest_hint:"Enter = elle satır sonu",
         tab_r:"Reels", rl_mode_video:"Video", rl_mode_cover:"Kapak", rl_title:"Başlık", rl_loc:"Konum rozeti", rl_dur:"Başlık süresi", rl_clip:"Süre", rl_export_v:"Videoyu dışa aktar", rl_export_c:"Kapağı indir", rl_done_c:"Kapak indirildi ✓", rl_sample:"عنوان الفيديو هنا", rl_words:(n,mx)=>`Kelime: ${n} (en fazla ${mx})`, rl_clips:"Klipler", rl_add_video:"+ Video", rl_add_image:"+ Görsel", rl_total:(n,s)=>`Toplam: ${s}s (${n} klip)`, rl_needclip:"Önce klip ekleyin.", cv_vid_total:(n,s)=>`Toplam: ${s}s (${n} son dakika)`,
@@ -867,7 +870,7 @@
         logo_upload:"Upload logo",
         tab_w:"Watermark", tab_c:"Cards", tab_b:"Breaking",
         cv_sec_brk:"Breaking text",
-        cv_vid_title:"Video (experimental)", cv_vid_choose:"Choose video", cv_vid_size:"Size", cv_vid_motion:"Motion", cv_vid_play:"Play", cv_vid_pause:"Pause", cv_vid_export:"Export video", cv_vid_rec:"Recording…", cv_vid_done:"Video downloaded ✓", cv_vid_unsup:"This browser cannot export video",
+        cv_vid_title:"Video (experimental)", cv_vid_choose:"Choose video", cv_vid_size:"Size", cv_vid_motion:"Motion", cv_vid_play:"Play", cv_vid_pause:"Pause", cv_vid_export:"Export video", cv_vid_rec:"Recording…", cv_vid_done:"Video downloaded ✓", cv_vid_unsup:"This browser cannot export video", vx_audio:"Preparing audio…", vx_enc:"Building video…", vx_cancel:"Cancel", vx_cancelled:"Cancelled", vx_opus:"Video downloaded ✓ — Note: this browser cannot encode AAC, audio saved as Opus (X may reject it).", vx_legacy:"No fast MP4 encoder in this browser; using real-time recording.",
         cv_mode_card:"Card", cv_mode_video:"Video",
         cv_vid_seg:"Breaking", cv_vid_add:"+ Add breaking", cv_vid_seglbl:"Breaking segments", cv_vid_grp_source:"Source", cv_vid_grp_output:"Output", cv_vid_textsize:"Text size", cv_vid_bghint:"Color = red background", cv_src_video:"Video", cv_src_image:"Image", cv_src_color:"Color", cv_vid_choose_img:"Choose image", cv_vid_cropimg:"Crop image", cv_suggest:"Suggest line breaks", cv_seg_imgadd:"Add image", cv_seg_imgchange:"Change image", cv_suggest_hint:"Enter = manual line break",
         tab_r:"Reels", rl_mode_video:"Video", rl_mode_cover:"Cover", rl_title:"Title", rl_loc:"Location badge", rl_dur:"Title time", rl_clip:"Duration", rl_export_v:"Export video", rl_export_c:"Export cover", rl_done_c:"Cover downloaded ✓", rl_sample:"عنوان الفيديو هنا", rl_words:(n,mx)=>`Words: ${n} (max ${mx})`, rl_clips:"Clips", rl_add_video:"+ Video", rl_add_image:"+ Image", rl_total:(n,s)=>`Total: ${s}s (${n} clips)`, rl_needclip:"Add a clip first.", cv_vid_total:(n,s)=>`Total: ${s}s (${n} breaking)`,
@@ -2526,10 +2529,12 @@
     }
     function cvVidBg(ctx, W, H, T){
         if (cvVidHasVideo()){
-            const vw = cvVideoEl.videoWidth, vh = cvVideoEl.videoHeight;
+            const fr = cvVidState._frame;   // decoded frame (export) or the <video> element (preview)
+            const vsrc = fr || cvVideoEl;
+            const vw = fr ? fr.displayWidth : cvVideoEl.videoWidth, vh = fr ? fr.displayHeight : cvVideoEl.videoHeight;
             const ir = vw / vh, tr = W / H; let sw, sh, sx, sy;
             if (ir > tr){ sh = vh; sw = sh * tr; sx = (vw - sw) / 2; sy = 0; } else { sw = vw; sh = sw / tr; sx = 0; sy = (vh - sh) / 2; }
-            ctx.drawImage(cvVideoEl, sx, sy, sw, sh, 0, 0, W, H); return true;
+            ctx.drawImage(vsrc, sx, sy, sw, sh, 0, 0, W, H); return true;
         }
         if (cvVidSourceVal === 'image'){
             const drawOne = (ref) => {
@@ -2667,7 +2672,7 @@
         cvAudioCache[fileUrl] = buf; return buf;
     }
 
-    async function cvVidExport(){
+    async function cvVidExportLegacy(){
         if (!cvVidCanvas.captureStream || !window.MediaRecorder){ cvVidStatus(t('cv_vid_unsup')); return; }
         cvVidStop();
         const sz = cvVidSizeObj();
@@ -2701,14 +2706,14 @@
         } catch (e) { audioTracks = []; }
 
         const combined = new MediaStream([...vstream.getVideoTracks(), ...audioTracks]);
-        const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } }) || '';
+        const mime = ['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1.42E01E','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } }) || '';
         let rec; try { rec = new MediaRecorder(combined, mime ? { mimeType: mime, videoBitsPerSecond: 9000000 } : {}); } catch (e) { cvVidStatus(t('cv_vid_unsup')); return; }
         const chunks = [];
         rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
         rec.onstop = () => {
             const type = rec.mimeType || mime || 'video/webm';
             const blob = new Blob(chunks, { type });
-            const ext = type.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+            const ext = type.indexOf('avc1') >= 0 ? 'mp4' : 'webm';
             downloadBlob(blob, 'AA-Breaking-' + Date.now() + '.' + ext);
             cvVidStatus(t('cv_vid_done'));
             document.getElementById('cvVidExport').disabled = false;
@@ -2728,6 +2733,222 @@
             requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
+    }
+
+    /* ===== MP4 export via WebCodecs: H.264 video + AAC audio (Opus fallback), rendered frame by frame =====
+       Not real-time: every frame is drawn at an exact time T, so the frame rate is a constant 30 fps and the
+       result does not depend on machine load. Falls back to the old MediaRecorder path when WebCodecs is missing. */
+    const AA_FPS = 30;
+    function aaWebCodecsOK(){ return typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined' && typeof Mp4Muxer !== 'undefined'; }
+    const aaYield = (() => { const ch = new MessageChannel(), q = []; ch.port1.onmessage = () => { const f = q.shift(); if (f) f(); }; return () => new Promise(r => { q.push(r); ch.port2.postMessage(0); }); })();
+    function aaSeekVideo(el, t){
+        return new Promise(res => {
+            const d = el.duration || 0; if (d) t = Math.max(0, Math.min(t, d - 0.02));
+            if (Math.abs(el.currentTime - t) < 0.0005 && el.readyState >= 2) { res(); return; }
+            let done = false; const fin = () => { if (done) return; done = true; el.removeEventListener('seeked', fin); res(); };
+            el.addEventListener('seeked', fin); setTimeout(fin, 4000);
+            try { el.currentTime = t; } catch (e) { fin(); }
+        });
+    }
+    // decode the audio track of a local video file (null if it has none)
+    async function aaDecodeFileAudio(url){
+        try { const ab = await (await fetch(url)).arrayBuffer(); const oac = new OfflineAudioContext(2, 48000, 48000); return await oac.decodeAudioData(ab); } catch (e) { return null; }
+    }
+    // mix clip audio + music offline. placements: [{buf, when, offset, dur, gain}]; music: {file, vol}
+    async function aaMixAudio(total, placements, music){
+        const usable = placements.filter(p => p.buf && p.gain > 0 && p.dur > 0.02);
+        if (!usable.length && !(music && music.file && music.vol > 0)) return null;
+        const SR = 48000, oac = new OfflineAudioContext(2, Math.ceil(total * SR), SR);
+        usable.forEach(p => {
+            const src = oac.createBufferSource(); src.buffer = p.buf; const g = oac.createGain(); src.connect(g); g.connect(oac.destination);
+            const f = Math.min(0.03, p.dur / 4);
+            g.gain.setValueAtTime(0, p.when); g.gain.linearRampToValueAtTime(p.gain, p.when + f);
+            g.gain.setValueAtTime(p.gain, p.when + p.dur - f); g.gain.linearRampToValueAtTime(0, p.when + p.dur);
+            src.start(p.when, p.offset, p.dur);
+        });
+        if (music && music.file && music.vol > 0){
+            const buf = await cvLoadAudioBuffer(music.file, oac);
+            const src = oac.createBufferSource(); src.buffer = buf; src.loop = true; const g = oac.createGain(); src.connect(g); g.connect(oac.destination);
+            g.gain.setValueAtTime(music.vol, 0); g.gain.setValueAtTime(music.vol, Math.max(0, total - 0.6)); g.gain.linearRampToValueAtTime(0.0001, total);
+            src.start(0); src.stop(total);
+        }
+        return await oac.startRendering();
+    }
+
+    // Frame-accurate reader for local MP4/MOV clips: mp4box demux + WebCodecs decode, read forward without seeking.
+    // (Seeking a <video> on a local blob costs ~100 ms per frame; sequential decode is many times faster.)
+    // Returns null when the clip cannot be handled this way (other container/codec, rotated phone video) → caller seeks instead.
+    async function aaOpenClipReader(url){
+        if (typeof MP4Box === 'undefined' || typeof DataStream === 'undefined' || typeof VideoDecoder === 'undefined') return null;
+        try {
+            const ab = await (await fetch(url)).arrayBuffer();
+            const mp4 = MP4Box.createFile();
+            let info = null; const samples = [];
+            mp4.onReady = i => { info = i; };
+            mp4.onError = () => {};
+            ab.fileStart = 0; mp4.appendBuffer(ab); mp4.flush();
+            if (!info || !info.videoTracks || !info.videoTracks.length) return null;
+            const vt = info.videoTracks[0];
+            const m = vt.matrix; if (m && !(m[0] === 65536 && m[1] === 0 && m[3] === 0 && m[4] === 65536)) return null;   // rotated
+            const trak = mp4.getTrackById(vt.id);
+            let desc;
+            for (const e of trak.mdia.minf.stbl.stsd.entries){
+                const box = e.avcC || e.hvcC || e.vpcC || e.av1C;
+                if (box){ const ds = new DataStream(undefined, 0, DataStream.BIG_ENDIAN); box.write(ds); desc = new Uint8Array(ds.buffer, 8); break; }
+            }
+            const cfg = { codec: vt.codec, codedWidth: vt.video.width, codedHeight: vt.video.height };
+            if (desc) cfg.description = desc;
+            const sup = await VideoDecoder.isConfigSupported(cfg); if (!sup.supported) return null;
+            mp4.onSamples = (id, user, arr) => { for (const x of arr) samples.push(x); };
+            mp4.setExtractionOptions(vt.id, null, { nbSamples: 1e9 });
+            mp4.start(); mp4.flush();
+            if (!samples.length) return null;
+            let minCts = Infinity; for (const x of samples) minCts = Math.min(minCts, x.cts);
+            const chunks = samples.map(x => ({ ts: Math.round((x.cts - minCts) / x.timescale * 1e6), dur: Math.round(x.duration / x.timescale * 1e6), key: !!x.is_sync, data: x.data }));
+            samples.length = 0;
+            let dec = null, outQ = [], cur = null, feed = 0, flushed = false, lastT = -1, err = null;
+            const close = () => { try { dec && dec.close(); } catch (e) {} dec = null; outQ.forEach(f => f.close()); outQ = []; if (cur){ cur.close(); cur = null; } };
+            const reset = (tus) => {
+                close(); err = null; flushed = false;
+                dec = new VideoDecoder({ output: f => outQ.push(f), error: e => { err = e; } });
+                dec.configure(cfg);
+                // start from the last keyframe (decode order) whose time is <= target
+                let k = 0; for (let i = 0; i < chunks.length; i++){ if (chunks[i].key && chunks[i].ts <= tus) k = i; }
+                feed = k;
+            };
+            return {
+                width: vt.video.width, height: vt.video.height,
+                async frameAt(t){
+                    const tus = Math.round(Math.max(0, t) * 1e6);
+                    if (!dec || tus < lastT){ reset(tus); }
+                    else {   // big jump forward: restart at a nearer keyframe
+                        let k = -1; for (let i = feed; i < chunks.length; i++){ if (chunks[i].key && chunks[i].ts <= tus) k = i; if (chunks[i].ts > tus + 2e6) break; }
+                        if (k > feed + 30) reset(tus);
+                    }
+                    lastT = tus;
+                    for (let guard = 0; guard < 100000; guard++){
+                        if (err) throw err;
+                        while (outQ.length && outQ[0].timestamp <= tus){ if (cur) cur.close(); cur = outQ.shift(); }
+                        if (outQ.length) break;                       // next decoded frame is later than target → cur is the one
+                        if (feed < chunks.length){
+                            for (let n = 0; n < 4 && feed < chunks.length; n++, feed++){
+                                const c = chunks[feed];
+                                dec.decode(new EncodedVideoChunk({ type: c.key ? 'key' : 'delta', timestamp: c.ts, duration: c.dur, data: c.data }));
+                            }
+                            await aaYield();
+                        } else if (!flushed){ flushed = true; await dec.flush(); }
+                        else break;                                   // end of clip: hold the last frame
+                    }
+                    if (!cur && outQ.length){ cur = outQ.shift(); }  // target before first frame
+                    return cur;
+                },
+                close
+            };
+        } catch (e) { console.warn('clip reader', e); return null; }
+    }
+    // opt: { W, H, total, draw: async (ctx, T) => {}, audio: AudioBuffer|null, progress: p => {}, cancelled: () => bool }
+    async function aaEncodeMp4(opt){
+        const W = opt.W, H = opt.H, total = opt.total, fps = AA_FPS;
+        let vcfg = null;
+        for (const codec of ['avc1.640028', 'avc1.4d0028', 'avc1.42e028']){
+            const c = { codec, width: W, height: H, bitrate: 10000000, framerate: fps, avc: { format: 'avc' } };
+            try { const r = await VideoEncoder.isConfigSupported(c); if (r.supported){ vcfg = c; break; } } catch (e) {}
+        }
+        if (!vcfg) throw new Error('no-h264');
+        const ab = opt.audio; let acfg = null, amux = null;
+        if (ab && typeof AudioEncoder !== 'undefined'){
+            for (const pair of [['mp4a.40.2', 'aac'], ['opus', 'opus']]){
+                const c = { codec: pair[0], sampleRate: ab.sampleRate, numberOfChannels: ab.numberOfChannels, bitrate: 192000 };
+                try { const r = await AudioEncoder.isConfigSupported(c); if (r.supported){ acfg = c; amux = pair[1]; break; } } catch (e) {}
+            }
+        }
+        const target = new Mp4Muxer.ArrayBufferTarget();
+        const muxer = new Mp4Muxer.Muxer({ target, fastStart: 'in-memory', firstTimestampBehavior: 'offset',
+            video: { codec: 'avc', width: W, height: H, frameRate: fps },
+            audio: acfg ? { codec: amux, sampleRate: acfg.sampleRate, numberOfChannels: acfg.numberOfChannels } : undefined });
+        let encErr = null;
+        const venc = new VideoEncoder({ output: (ch, meta) => muxer.addVideoChunk(ch, meta), error: e => { encErr = e; } });
+        venc.configure(vcfg);
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const ctx = cv.getContext('2d');
+        const n = Math.max(1, Math.round(total * fps)), fdur = Math.round(1e6 / fps);
+        for (let i = 0; i < n; i++){
+            if (encErr) throw encErr;
+            if (opt.cancelled && opt.cancelled()){ try { venc.close(); } catch (e) {} throw new Error('cancelled'); }
+            ctx.save(); ctx.clearRect(0, 0, W, H); await opt.draw(ctx, i / fps); ctx.restore();
+            const vf = new VideoFrame(cv, { timestamp: i * fdur, duration: fdur });
+            venc.encode(vf, { keyFrame: i % (fps * 2) === 0 }); vf.close();
+            while (venc.encodeQueueSize > 6) await aaYield();
+            if (i % 6 === 0){ if (opt.progress) opt.progress(i / n); await aaYield(); }
+        }
+        await venc.flush(); venc.close();
+        if (encErr) throw encErr;
+        if (acfg){
+            const aenc = new AudioEncoder({ output: (ch, meta) => muxer.addAudioChunk(ch, meta), error: e => { encErr = e; } });
+            aenc.configure(acfg);
+            const nch = ab.numberOfChannels, SR = ab.sampleRate, nf = Math.min(ab.length, Math.round(total * SR)), BLK = 4800;
+            const chans = []; for (let c = 0; c < nch; c++) chans.push(ab.getChannelData(c));
+            for (let off = 0; off < nf; off += BLK){
+                const len = Math.min(BLK, nf - off), data = new Float32Array(len * nch);
+                for (let c = 0; c < nch; c++) data.set(chans[c].subarray(off, off + len), c * len);
+                const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: len, numberOfChannels: nch, timestamp: Math.round(off / SR * 1e6), data });
+                aenc.encode(ad); ad.close();
+                while (aenc.encodeQueueSize > 20) await aaYield();
+            }
+            await aenc.flush(); aenc.close();
+            if (encErr) throw encErr;
+        }
+        muxer.finalize();
+        return { blob: new Blob([target.buffer], { type: 'video/mp4' }), audioCodec: amux };
+    }
+    // shared button/run wrapper: export button doubles as Cancel while running
+    function aaRunExport(btnId, statusFn, labelKey, job){
+        const btn = document.getElementById(btnId);
+        if (btn._aaRun){ btn._aaRun.cancel = true; return; }
+        const run = { cancel: false }; btn._aaRun = run;
+        btn.textContent = t('vx_cancel'); btn.classList.add('aa-cancel');
+        const finish = () => { btn._aaRun = null; btn.textContent = t(labelKey); btn.classList.remove('aa-cancel'); };
+        return job(run).then(finish, e => { finish(); if (e && e.message === 'cancelled') statusFn(t('vx_cancelled')); else { console.error(e); statusFn(t('cv_vid_unsup')); } });
+    }
+
+    async function cvVidExport(){
+        if (!aaWebCodecsOK()){ cvVidStatus(t('vx_legacy')); return cvVidExportLegacy(); }
+        return aaRunExport('cvVidExport', cvVidStatus, 'cv_vid_export', async (run) => {
+            cvVidStop();
+            const sz = cvVidSizeObj();
+            const total = Math.max(0.5, cvSegTimeline().total);
+            const hasVid = cvVidHasVideo();
+            const s0 = cvVidState.start || 0, e0 = cvVidState.end || cvVideoEl.duration || total, L = Math.max(0.1, e0 - s0);
+            const musicFile = document.getElementById('cvVidAudio').value;
+            const mode = document.getElementById('cvVidAudioMode').value;
+            const vol = (parseInt(document.getElementById('cvVidVol').value, 10) || 0) / 100;
+            cvVidStatus(t('vx_audio'));
+            const placements = [];
+            if (hasVid && !(musicFile && mode === 'replace')){
+                if (cvVidState.audioBufSrc !== cvVideoEl.src){ cvVidState.audioBuf = await aaDecodeFileAudio(cvVideoEl.src); cvVidState.audioBufSrc = cvVideoEl.src; }
+                // the clip loops over the trim range for as long as the breaking segments last (same as the preview)
+                for (let w = 0; w < total; w += L) placements.push({ buf: cvVidState.audioBuf, when: w, offset: s0, dur: Math.min(L, total - w), gain: 1 });
+            }
+            let audio = null;
+            try { audio = await aaMixAudio(total, placements, musicFile ? { file: musicFile, vol } : null); } catch (e) { cvVidStatus(t('cv_vid_audioerr')); return; }
+            if (hasVid){ try { cvVideoEl.pause(); } catch (e) {} }
+            const reader = hasVid ? await aaOpenClipReader(cvVideoEl.src) : null;
+            let res;
+            try {
+                res = await aaEncodeMp4({ W: sz.W, H: sz.H, total, audio,
+                    cancelled: () => run.cancel,
+                    progress: p => cvVidStatus(t('vx_enc') + ' ' + Math.round(p * 100) + '%'),
+                    draw: async (ctx, T) => {
+                        if (hasVid){ const lt = s0 + (T % L); if (reader) cvVidState._frame = await reader.frameAt(lt); else await aaSeekVideo(cvVideoEl, lt); }
+                        cvVidDrawAtT(ctx, sz.W, sz.H, T);
+                    } });
+            } catch (e) {
+                if (e && e.message === 'no-h264'){ cvVidStatus(t('vx_legacy')); return cvVidExportLegacy(); }
+                throw e;
+            } finally { cvVidState._frame = null; if (reader) reader.close(); }
+            downloadBlob(res.blob, 'AA-Breaking-' + Date.now() + '.mp4');
+            cvVidStatus(res.audioCodec === 'opus' ? t('vx_opus') : t('cv_vid_done'));
+        });
     }
     document.getElementById('cvVidExport').addEventListener('click', cvVidExport);
     cvRenderSegs();
@@ -2838,7 +3059,8 @@
     function rlDrawItemBg(ctx, W, H, it){
         let src = null, nw = 0, nh = 0;
         if (it){
-            if (it.type === 'video' && it.el && it.el.videoWidth){ src = it.el; nw = it.el.videoWidth; nh = it.el.videoHeight; }
+            if (it.type === 'video' && it._frame){ src = it._frame; nw = it._frame.displayWidth; nh = it._frame.displayHeight; }
+            else if (it.type === 'video' && it.el && it.el.videoWidth){ src = it.el; nw = it.el.videoWidth; nh = it.el.videoHeight; }
             else if (it.type === 'image' && it.img){ src = it.img; nw = it.img.width; nh = it.img.height; }
         }
         if (!src){ ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H); return; }
@@ -2962,7 +3184,7 @@
     document.getElementById('rlReplay').addEventListener('click', () => { rlStop(); rlStartPlay(); });
 
     /* ---------- export ---------- */
-    async function rlExport(){
+    async function rlExportLegacy(){
         const s = rlSizeObj();
         if (rlState.mode === 'cover'){
             const off = document.createElement('canvas'); off.width = s.W; off.height = s.H;
@@ -2995,13 +3217,13 @@
             }
         } catch (e) { audioTracks = []; }
         const combined = new MediaStream([...vstream.getVideoTracks(), ...audioTracks]);
-        const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } }) || '';
+        const mime = ['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1.42E01E','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } }) || '';
         let rec; try { rec = new MediaRecorder(combined, mime ? { mimeType: mime, videoBitsPerSecond: 9000000 } : {}); } catch (e) { rlStatus(t('cv_vid_unsup')); return; }
         const chunks = [];
         rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
         rec.onstop = () => {
             const type = rec.mimeType || mime || 'video/webm';
-            const ext = type.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+            const ext = type.indexOf('avc1') >= 0 ? 'mp4' : 'webm';
             downloadBlob(new Blob(chunks, { type }), 'AA-Reel-' + Date.now() + '.' + ext);
             rlStatus(t('cv_vid_done')); document.getElementById('rlExport').disabled = false;
             rlItems.forEach(it => { if (it.el){ try { it.el.pause(); } catch (e) {} it._playing = false; } });
@@ -3020,6 +3242,52 @@
             requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
+    }
+
+    async function rlExport(){
+        if (rlState.mode === 'cover' || !rlItems.length) return rlExportLegacy();   // cover PNG + "add a clip" message stay as they were
+        if (!aaWebCodecsOK()){ rlStatus(t('vx_legacy')); return rlExportLegacy(); }
+        return aaRunExport('rlExport', rlStatus, 'rl_export_v', async (run) => {
+            rlStop();
+            const s = rlSizeObj();
+            const tl = rlTimeline(), total = Math.max(0.5, tl.total);
+            const musicFile = document.getElementById('rlAudio').value;
+            const mode = document.getElementById('rlAudioMode').value;
+            const vol = (parseInt(document.getElementById('rlVol').value, 10) || 0) / 100;
+            const clipGain = (musicFile && mode === 'replace') ? 0 : 1;
+            rlStatus(t('vx_audio'));
+            const placements = [];
+            for (const e of tl.arr){
+                const it = e.it; if (it.type !== 'video' || !it.url) continue;
+                if (clipGain > 0 && it.audioBuf === undefined) it.audioBuf = await aaDecodeFileAudio(it.url);
+                placements.push({ buf: it.audioBuf, when: e.start, offset: it.start || 0, dur: e.dur, gain: clipGain });
+            }
+            let audio = null;
+            try { audio = await aaMixAudio(total, placements, musicFile ? { file: musicFile, vol } : null); } catch (er) { rlStatus(t('cv_vid_audioerr')); return; }
+            const vids = tl.arr.filter(e => e.it.type === 'video' && e.it.url);
+            for (const e of vids){ e.it._reader = await aaOpenClipReader(e.it.url); }
+            let res;
+            try {
+                res = await aaEncodeMp4({ W: s.W, H: s.H, total, audio,
+                    cancelled: () => run.cancel,
+                    progress: p => rlStatus(t('vx_enc') + ' ' + Math.round(p * 100) + '%'),
+                    draw: async (ctx, T) => {
+                        for (const e of vids){
+                            const it = e.it;
+                            if (T >= e.start - RL_FADE && T < e.end){
+                                const local = Math.max(it.start || 0, Math.min((it.end || it.natDur) - 0.001, (it.start || 0) + (T - e.start)));
+                                if (it._reader) it._frame = await it._reader.frameAt(local); else await aaSeekVideo(it.el, local);
+                            } else if (it._reader && T >= e.end){ it._reader.close(); it._reader = null; it._frame = null; }   // done with this clip: free decoder memory
+                        }
+                        rlDrawAt(ctx, s.W, s.H, T);
+                    } });
+            } catch (er) {
+                if (er && er.message === 'no-h264'){ rlStatus(t('vx_legacy')); return rlExportLegacy(); }
+                throw er;
+            } finally { for (const e of vids){ if (e.it._reader) e.it._reader.close(); e.it._reader = null; e.it._frame = null; } }
+            downloadBlob(res.blob, 'AA-Reel-' + Date.now() + '.mp4');
+            rlStatus(res.audioCodec === 'opus' ? t('vx_opus') : t('cv_vid_done'));
+        });
     }
     document.getElementById('rlExport').addEventListener('click', rlExport);
     function rlPopulateAudio(){
