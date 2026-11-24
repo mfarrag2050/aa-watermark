@@ -64,6 +64,15 @@
         await lLoading; return lReady;
     }
 
+    // face identity (128-number descriptor, face-api FaceRecognitionNet, MIT) — used to avoid the same person twice in an album
+    let recLoading = null, recReady = false;
+    async function ensureRec() {
+        if (recReady) return true;
+        if (!(await ensureLocal())) return false;
+        if (!recLoading) recLoading = G.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL).then(() => { recReady = true; }).catch(e => console.warn('AASmart: identity model unavailable', e));
+        await recLoading; return recReady;
+    }
+
     // ---------- worker client (page side) ----------
     let worker = null, wStart = null, wSeq = 0, mode = null;
     const wPend = new Map();
@@ -130,6 +139,11 @@
         const colorful = Math.sqrt(srg * srg + syb * syb) + 0.3 * Math.sqrt((rg / n) ** 2 + (yb / n) ** 2);
         return { mean: m / 255, sd: sd / 255, hi: hi / n, lo: lo / n, colorful };
     }
+    function meanBox(g, w, h, x0, y0, x1, y1) {
+        x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(w, Math.ceil(x1)); y1 = Math.min(h, Math.ceil(y1));
+        let s = 0, n = 0; for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) { s += g[y * w + x]; n++; }
+        return n ? s / n / 255 : 0.5;
+    }
     const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
     function eyeAR(pts) { return (dist(pts[1], pts[5]) + dist(pts[2], pts[4])) / (2 * dist(pts[0], pts[3]) || 1); }
 
@@ -140,7 +154,7 @@
     }
 
     // ---------- persistent cache (IndexedDB): re-adding the same photos is instant ----------
-    const VER = 5;
+    const VER = 6;
     let dbp = null;
     function db() {
         if (!dbp) dbp = new Promise(res => {
@@ -248,7 +262,7 @@
             out.push({
                 x: x0 / cw, y: y0 / ch, w: (x1 - x0) / cw, h: (y1 - y0) / ch, conf: r.detection.score, rot,
                 eyes: (le + re) / 2, mouth, happy: ex.happy || 0, neutral: ex.neutral || 0,
-                sharp: lapVar(g, cw, ch, x0, y0, x1, y1),
+                sharp: lapVar(g, cw, ch, x0, y0, x1, y1), lum: meanBox(g, cw, ch, x0, y0, x1, y1),
                 eyeY: ((eL.y + eR.y) / 2) / ch, cx: ((iL.x + iR.x) / 2) / cw
             });
         }
@@ -263,6 +277,18 @@
             // upright faces first
             r.faces = (await detectFaces(c, g, cw, ch, 0)).sort((a, b) => b.w * b.h - a.w * a.h);
         } catch (e) { console.warn('AASmart: face detection failed', e); }
+        // who is it: a descriptor for the two biggest clear faces (enough to tell the main people apart)
+        const named = r.faces.filter(f => f.w >= 0.05 && f.conf >= 0.6).slice(0, 2);
+        if (named.length && await ensureRec()) {
+            const fa = G.faceapi, px = fa.tf.browser.fromPixels(c);
+            try {
+                const boxes = named.map(f => new fa.Rect(f.x * cw, f.y * ch, f.w * cw, f.h * ch));
+                const tens = await fa.extractFaceTensors(px, boxes);
+                for (let k = 0; k < tens.length; k++) { const d = await fa.computeFaceDescriptor(tens[k]); named[k].desc = Array.from(d, v => Math.round(v * 1000) / 1000); }
+                fa.tf.dispose(tens);
+            } catch (e) { console.warn('AASmart: identity failed', e); }
+            finally { px.dispose(); }
+        }
         const maxFace = r.faces.reduce((m, f) => Math.max(m, f.w), 0);
         if (maxFace < 0.07 && await ensureBody()) {   // no face, or only small ones (crowd): look for the actual subject
             try { Object.assign(r, await detectSubjects(c)); } catch (e) { console.warn('AASmart: subject detection failed', e); }
@@ -313,7 +339,9 @@
         const mouth = talking ? clamp(1 - (f.mouth - 0.085) * 6, 0.45, 1) : 1;
         const expr = 0.7 + 0.3 * clamp(f.happy + f.neutral);
         const edge = (f.x < 0.01 || f.y < 0.01 || f.x + f.w > 0.99 || f.y + f.h > 0.99) ? 0.6 : 1;   // face cut by the frame
-        return { q: size * eyes * mouth * expr * edge, eyes, talking, edge: edge < 1 };
+        const L = f.lum == null ? 0.5 : f.lum;                                 // the face itself in shadow or burnt out
+        const light = L < 0.16 ? 0.55 : L < 0.26 ? 0.8 : L > 0.88 ? 0.7 : 1;
+        return { q: size * eyes * mouth * expr * edge * light, eyes, talking, edge: edge < 1, dark: L < 0.26, burnt: L > 0.88 };
     }
     function rank(infos, target) {
         const ok = infos.filter(i => i && i.ok);
@@ -340,23 +368,54 @@
             i.score = Math.round(s);
             if (sharp > 0.75) why.push('sharp'); else if (sharp < 0.35) why.push('soft');
             if (expo < 0.5) why.push(i.mean < 0.48 ? 'dark' : 'bright');
-            if (fq) { if (fq.eyes < 0.6) why.push('eyes'); if (fq.talking) why.push('mouth'); if (fq.edge) why.push('cut'); if (fq.q > 0.7) why.push('face'); }
+            if (fq) { if (fq.dark) why.push('facedark'); if (fq.burnt) why.push('faceburnt'); if (fq.eyes < 0.6) why.push('eyes'); if (fq.talking) why.push('mouth'); if (fq.edge) why.push('cut'); if (fq.q > 0.7) why.push('face'); }
             if (res < 0.95) why.push('lowres');
-            i.why = why;
+            i.why = why; i.shot = shotOf(i);
         });
         return infos;
     }
-    // greedy best-first, skipping near-duplicates (dHash hamming <= dupT) of anything already picked
-    function pickBest(infos, n, hashes, hamming, dupT = 10, only = null) {
-        const rk = k => infos[k].score - (only && !only.has(k) ? 1000 : 0);   // fully analysed candidates first
-        const order = infos.map((i, k) => k).filter(k => infos[k] && infos[k].ok).sort((a, b) => rk(b) - rk(a));
-        const pick = [], skipped = [];
-        for (const k of order) {
-            if (pick.length >= n) break;
-            const dup = hashes && pick.some(p => hashes[p] && hashes[k] && hamming(hashes[p], hashes[k]) <= dupT);
-            if (dup) skipped.push(k); else pick.push(k);
-        }
-        for (const k of skipped) { if (pick.length >= n) break; pick.push(k); }   // not enough distinct shots: fall back to the best duplicates
+    // shot size, for variety: close-up / medium / wide / scene (no person)
+    function shotOf(i) {
+        const f = i.faces && i.faces.find(x => x.conf >= 0.6);
+        if (f) return f.h >= 0.2 ? 'close' : f.h >= 0.07 ? 'medium' : 'wide';
+        const m = i.subjects && (i.subjects.find(o => o.main) || i.subjects[0]);
+        if (m) return m.h >= 0.75 && m.w * m.h > 0.3 ? 'medium' : 'wide';
+        return i.level === 'full' ? 'scene' : null;
+    }
+    const descDist = (a, b) => { let s = 0; for (let k = 0; k < a.length; k++) { const d = a[k] - b[k]; s += d * d; } return Math.sqrt(s); };
+    const people = i => (i.faces || []).filter(f => f.desc).map(f => f.desc);
+    // greedy: best score first, but
+    //  - near-duplicates (dHash hamming <= dupT) are skipped, look-alikes (<= dupT + 8) lose 6 points,
+    //  - each repeat of the same shot size costs 4 points (an album of wide, medium and close shots),
+    //  - with noRepeat, a photo whose main person is already in the album waits until nothing else is left.
+    function pickBest(infos, n, hashes, hamming, dupT = 10, only = null, o = {}) {
+        const pool = infos.map((i, k) => k).filter(k => infos[k] && infos[k].ok);
+        const base = k => infos[k].score - (only && !only.has(k) ? 1000 : 0);   // fully analysed candidates first
+        const pick = [], used = new Set(), seen = [], shots = {};
+        const ham = (a, b) => hashes && hashes[a] && hashes[b] ? hamming(hashes[a], hashes[b]) : 99;
+        const samePerson = k => o.noRepeat && people(infos[k]).some(d => seen.some(e => descDist(d, e) < 0.5));
+        const take = k => { pick.push(k); used.add(k); people(infos[k]).forEach(d => seen.push(d)); const sh = infos[k].shot; if (sh) shots[sh] = (shots[sh] || 0) + 1; };
+        const pass = (allowDup, allowRepeat) => {
+            while (pick.length < n) {
+                let best = null, bs = -Infinity;
+                for (const k of pool) {
+                    if (used.has(k)) continue;
+                    let minH = 99; for (const p of pick) minH = Math.min(minH, ham(p, k));
+                    if (!allowDup && minH <= dupT) continue;
+                    if (!allowRepeat && samePerson(k)) continue;
+                    let v = base(k);
+                    if (minH <= dupT + 8) v -= 6;
+                    const sh = infos[k].shot; if (o.diverse !== false && sh) v -= 4 * (shots[sh] || 0);
+                    if (v > bs) { bs = v; best = k; }
+                }
+                if (best === null) return;
+                take(best);
+            }
+        };
+        pass(false, false);
+        const p1 = pick.length; pass(false, true);           // not enough different people: allow repeats
+        const p2 = pick.length; pass(true, true);            // not enough distinct shots: allow near-duplicates
+        pick.repeats = p2 - p1; pick.dups = pick.length - p2;
         return pick;
     }
 

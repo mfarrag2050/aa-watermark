@@ -164,6 +164,7 @@
         #sizesBar .preview-btn { width: 36px; height: 36px; }
         #sizesClose { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; background: #ef4444; color: #fff; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
+        #smartName { width: 130px !important; padding: 5px 8px; font-size: 12px; border: 1px solid #d0d7e2; border-radius: 6px; }
         #smartRow { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
         #smartPickBtn { width: auto !important; flex: 0 0 auto; margin: 0 !important; padding: 8px 14px; border: 0; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; color: #fff;
             background: linear-gradient(135deg, #7c3aed, #2b7cff); box-shadow: 0 4px 12px rgba(124,58,237,.25); }
@@ -484,6 +485,8 @@
         <button id="smartPickBtn">✨ En iyi fotoğrafları seç</button>
         <input type="number" id="smartN" min="1" max="20" value="10" title="">
         <label class="checkbox-container" id="lblSmartCropWrap"><input type="checkbox" id="smartCropCheckbox" checked> <span id="lbl_smartcrop">Akıllı kırpma</span></label>
+        <label class="checkbox-container" id="lblNoRepeatWrap"><input type="checkbox" id="noRepeatCheckbox" checked> <span id="lbl_norepeat">Aynı kişiyi tekrarlama</span></label>
+        <input type="text" id="smartName" placeholder="Öncelikli isim" autocomplete="off">
         <span id="smartStatus"></span>
     </div>
 
@@ -834,8 +837,8 @@
         w_cards_hint:"Başlık ve tasarım stilleri (Stil 01 · Stil 02 · 3 Satır · Son dakika) için <a data-go='tabC'>Kartlar</a> sekmesini kullanın — X + Instagram + Story tek seferde iner.",
         sm_btn:"✨ En iyi fotoğrafları seç", sm_count:"Kaç fotoğraf seçilsin (1–20)", sm_crop:"Akıllı kırpma", sm_crop_title:"Elle kırpılmayan fotoğraflar yüze ve konuya göre kırpılır (Instagram, X, Story ve GIF).",
         sm_loading:"Akıllı analiz hazırlanıyor…", sm_prescan:(i,n)=>`Ön tarama… ${i}/${n}`, sm_analyzing:(i,n)=>`En güçlü adaylar inceleniyor… ${i}/${n}`, sm_done:(k,r)=>`En iyi ${k} fotoğraf seçildi · ${r} fotoğraf elendi`, sm_nomodel:"Yüz modeli yüklenemedi; seçim netlik, ışık ve çözünürlüğe göre yapıldı.",
-        sm_parked:(n)=>`Elenenler (${n}) — geri almak için tıklayın`, sm_restore_all:"Tümünü geri al", sm_score:"Puan", b_smart:"Akıllı kırpma", sz_open:"Üç ölçüde önizle (Instagram · X · Story)", sz_safe:"Story: üst 250 px Instagram profil çubuğunun altında kalır", sz_rendering:"Hazırlanıyor…",
-        sm_why:{sharp:"net", soft:"bulanık", dark:"karanlık", bright:"aşırı parlak", eyes:"gözler kapalı", mouth:"konuşurken yakalanmış", cut:"yüz kadraj dışında", face:"yüz net ve iyi", lowres:"düşük çözünürlük"},
+        sm_parked:(n)=>`Elenenler (${n}) — geri almak için tıklayın`, sm_restore_all:"Tümünü geri al", sm_score:"Puan", b_smart:"Akıllı kırpma", sz_open:"Üç ölçüde önizle (Instagram · X · Story)", sm_norepeat:"Aynı kişiyi tekrarlama", sm_norepeat_title:"Albümde aynı kişi iki kez yer almaz; yeterli farklı kare yoksa en iyileri tekrarla tamamlanır", sm_name:"Öncelikli isim", sm_name_title:"Bu ismi künyesinde (caption) geçen fotoğraflar öne çıkar", sm_repeats:(k)=>`${k} karede aynı kişi tekrar ediyor (yeterli farklı kare yok)`, sm_shot:{close:"yakın plan", medium:"orta plan", wide:"genel plan", scene:"mekân / detay"}, sz_safe:"Story: üst 250 px Instagram profil çubuğunun altında kalır", sz_rendering:"Hazırlanıyor…",
+        sm_why:{sharp:"net", soft:"bulanık", dark:"karanlık", bright:"aşırı parlak", eyes:"gözler kapalı", facedark:"yüz karanlıkta", faceburnt:"yüz aşırı parlak", name:"isim künyede geçiyor", mouth:"konuşurken yakalanmış", cut:"yüz kadraj dışında", face:"yüz net ve iyi", lowres:"düşük çözünürlük"},
         gif_square:"GIF her zaman kare: 1080×1080",
         w_gifdelay:"GIF kare süresi:", w_story:"Story", w_copy:"Kopyala", w_copied:"Kopyalandı ✓", w_archive:"Çekim tarihi haberden eskiyse fotoğraf arşivdendir",
         w_low:(d)=>`Düşük çözünürlük (${d})`, w_low_short:"Düşük çözünürlük", w_low_tip:(l)=>"Bu boyutlarda büyütülecek: "+l, w_dup:(l)=>"Benzer: #"+l, w_dup_tip:"Bu kareye çok benzeyen görseller var",
@@ -904,8 +907,8 @@
         w_cards_hint:"For a headline and design styles (Style 01 · Style 02 · 3 Lines · Breaking) use the <a data-go='tabC'>Cards</a> tab — X + Instagram + Story export together.",
         sm_btn:"✨ Pick the best photos", sm_count:"How many to keep (1–20)", sm_crop:"Smart crop", sm_crop_title:"Photos you did not crop by hand are framed around faces and the subject (Instagram, X, Story and GIF).",
         sm_loading:"Preparing smart analysis…", sm_prescan:(i,n)=>`Quick scan… ${i}/${n}`, sm_analyzing:(i,n)=>`Analysing the strongest candidates… ${i}/${n}`, sm_done:(k,r)=>`Kept the best ${k} · ${r} set aside`, sm_nomodel:"Face model could not load; picked by sharpness, light and resolution only.",
-        sm_parked:(n)=>`Set aside (${n}) — click one to bring it back`, sm_restore_all:"Restore all", sm_score:"Score", b_smart:"Smart crop", sz_open:"Preview in three sizes (Instagram · X · Story)", sz_safe:"Story: the top 250 px sit under Instagram's profile bar", sz_rendering:"Rendering…",
-        sm_why:{sharp:"sharp", soft:"soft", dark:"dark", bright:"too bright", eyes:"eyes closed", mouth:"caught mid-word", cut:"face cut off", face:"good face", lowres:"low resolution"},
+        sm_parked:(n)=>`Set aside (${n}) — click one to bring it back`, sm_restore_all:"Restore all", sm_score:"Score", b_smart:"Smart crop", sz_open:"Preview in three sizes (Instagram · X · Story)", sm_norepeat:"No repeated person", sm_norepeat_title:"The same person appears only once in the album; if there are not enough different shots the best repeats fill the gap", sm_name:"Priority name", sm_name_title:"Photos whose caption mentions this name move up", sm_repeats:(k)=>`${k} photos repeat a person (not enough different shots)`, sm_shot:{close:"close-up", medium:"medium shot", wide:"wide shot", scene:"scene / detail"}, sz_safe:"Story: the top 250 px sit under Instagram's profile bar", sz_rendering:"Rendering…",
+        sm_why:{sharp:"sharp", soft:"soft", dark:"dark", bright:"too bright", eyes:"eyes closed", facedark:"face in shadow", faceburnt:"face burnt out", name:"name in caption", mouth:"caught mid-word", cut:"face cut off", face:"good face", lowres:"low resolution"},
         gif_square:"GIF is always square: 1080×1080",
         w_gifdelay:"GIF frame time:", w_story:"Story", w_copy:"Copy", w_copied:"Copied ✓", w_archive:"If the shot date is older than the story, the photo is from the archive",
         w_low:(d)=>`Low resolution (${d})`, w_low_short:"Low resolution", w_low_tip:(l)=>"Will be upscaled for: "+l, w_dup:(l)=>"Similar: #"+l, w_dup_tip:"Other images look almost the same",
@@ -992,6 +995,7 @@
       g('opt1920').textContent = "1080 x 1920 (" + t('w_story') + ")";
       g('lbl_all').textContent = t('w_all'); g('lblAllWrap').title = t('w_all_title');
       g('lbl_board').textContent = t('w_board'); g('lblBoardWrap').title = t('w_board_title');
+      g('lbl_norepeat').textContent = t('sm_norepeat'); g('lblNoRepeatWrap').title = t('sm_norepeat_title'); g('smartName').placeholder = t('sm_name'); g('smartName').title = t('sm_name_title');
       g('smartPickBtn').textContent = t('sm_btn'); g('smartN').title = t('sm_count'); g('lbl_smartcrop').textContent = t('sm_crop'); g('lblSmartCropWrap').title = t('sm_crop_title'); g('parkedAll').textContent = t('sm_restore_all'); g('gifSizeNote').textContent = t('gif_square');
       g('boardTitle').placeholder = t('w_board_ph'); g('lbl_gifdelay').textContent = t('w_gifdelay');
       g('tabW').textContent = t('tab_w'); g('tabC').textContent = t('tab_c'); g('tabB').textContent = t('tab_b'); g('tabR').textContent = t('tab_r');
@@ -1165,7 +1169,7 @@
             const sc = smartScores.get(keyOf(file));
             if (sc) {
                 const chip2 = document.createElement('div'); chip2.className = 'score-chip' + (sc.top ? ' top' : '');
-                chip2.textContent = '★ ' + sc.score; chip2.title = t('sm_score') + ': ' + sc.score + (sc.why.length ? ' — ' + sc.why.map(w => t('sm_why')[w] || w).join(' · ') : '');
+                chip2.textContent = '★ ' + sc.score; chip2.title = t('sm_score') + ': ' + sc.score + (sc.shot ? ' · ' + (t('sm_shot')[sc.shot] || sc.shot) : '') + (sc.why.length ? ' — ' + sc.why.map(w => t('sm_why')[w] || w).join(' · ') : '');
                 wrapper.appendChild(chip2);
             }
 
@@ -1912,16 +1916,26 @@
                 infos[cand[j]] = await AASmart.analyze(keyOf(files[cand[j]]));
             }
             AASmart.rank(infos, dims);
-            const pick = AASmart.pickBest(infos, n, hashes, hamming, DUP_THRESHOLD, new Set(cand)), keep = new Set(pick);
-            infos.forEach((inf, i) => { if (inf && inf.ok) smartScores.set(keyOf(files[i]), { score: inf.score, why: inf.why || [], top: keep.has(i) }); });
+            // a name typed by the editor: photos whose caption mentions it move up
+            const norm = x => (x || '').toLocaleLowerCase('tr').normalize('NFKD').replace(/[\u0300-\u036f\u064b-\u065f\u0670]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+            const want = norm(document.getElementById('smartName').value.trim());
+            if (want) for (let i = 0; i < files.length; i++) {
+                const ip = (await analyze(files[i])).iptc || {};
+                if (infos[i] && infos[i].ok && norm([ip.headline, ip.caption, ip.keywords].filter(Boolean).join(' ')).includes(want)) { infos[i].score += 10; (infos[i].why = infos[i].why || []).push('name'); }
+            }
+            const noRepeat = document.getElementById('noRepeatCheckbox').checked;
+            const pick = AASmart.pickBest(infos, n, hashes, hamming, DUP_THRESHOLD, new Set(cand), { noRepeat }), keep = new Set(pick);
+            infos.forEach((inf, i) => { if (inf && inf.ok) smartScores.set(keyOf(files[i]), { score: inf.score, why: inf.why || [], top: keep.has(i), shot: inf.shot }); });
             selectedFiles = pick.map(i => files[i]); cropDataArray = pick.map(i => crops[i]);
             files.forEach((f, i) => { if (!keep.has(i)) parked.push({ file: f, crop: crops[i] }); });
             parked.sort((a, b) => ((smartScores.get(keyOf(b.file)) || {}).score || 0) - ((smartScores.get(keyOf(a.file)) || {}).score || 0));
             renderThumbnails(); renderParked();
-            st.textContent = t('sm_done')(pick.length, files.length - pick.length) + (AASmart.failed ? ' — ' + t('sm_nomodel') : '');
+            st.textContent = t('sm_done')(pick.length, files.length - pick.length) + (noRepeat && pick.repeats ? ' — ' + t('sm_repeats')(pick.repeats) : '') + (AASmart.failed ? ' — ' + t('sm_nomodel') : '');
         } finally { btn.disabled = false; }
     }
     document.getElementById('smartPickBtn').addEventListener('click', smartPick);
+    try { const nr = localStorage.getItem('aa_norepeat'); if (nr !== null) document.getElementById('noRepeatCheckbox').checked = nr === 'true'; } catch (e) {}
+    document.getElementById('noRepeatCheckbox').addEventListener('change', e => { try { localStorage.setItem('aa_norepeat', e.target.checked); } catch (err) {} });
 
     function renderParked() {
         const wrap = document.getElementById('parkedWrap'), list = document.getElementById('parkedList');
