@@ -9,8 +9,14 @@
  *   AASmart.rank(infos)              -> infos get .score (0..100) and .why[]
  *   AASmart.pickBest(infos, n)       -> indices of the best n, skipping near-duplicates
  *   AASmart.cropBox(info, tw, th)    -> {x, y, w, h} in original pixels, or null
+ *
+ * The heavy part (face / people / pose models) runs in a Web Worker (aa-smart-worker.js, which loads this
+ * same file) so the panel never freezes; if the browser can't run WebGL in a worker it falls back to the page.
  */
 (function () {
+    const G = typeof self !== 'undefined' ? self : window;
+    const IN_WORKER = typeof document === 'undefined';
+    function mkCanvas(w, h) { if (IN_WORKER) return new OffscreenCanvas(w, h); const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
     const MODEL_URL = 'models';
     const A = 640;                 // analysis size (long side)
     let loading = null, ready = false, failed = false;
@@ -21,31 +27,78 @@
     // people / animal detector (CenterNet, COCO) and single-person pose (MoveNet Lightning) — from Human (MIT); loaded only when a photo has no face
     async function ensureBody() {
         if (bodyReady) return true;
-        if (!(await ensure())) return false;
+        if (!(await ensureLocal())) return false;
         if (!bodyLoading) bodyLoading = (async () => {
-            try { const tf = faceapi.tf; OBJ = await tf.loadGraphModel(MODEL_URL + '/centernet.json'); POSE = await tf.loadGraphModel(MODEL_URL + '/movenet-lightning.json'); bodyReady = true; }
+            try { const tf = G.faceapi.tf; OBJ = await tf.loadGraphModel(MODEL_URL + '/centernet.json'); POSE = await tf.loadGraphModel(MODEL_URL + '/movenet-lightning.json'); bodyReady = true; }
             catch (e) { console.warn('AASmart: body models unavailable', e); }
         })();
         await bodyLoading; return bodyReady;
     }
 
     function loadScript(src) {
+        if (IN_WORKER) { importScripts(src); return Promise.resolve(); }
         return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
     }
+    // models in this thread (the worker, or the page when the worker is not available)
+    let lLoading = null, lReady = false, lFailed = false;
+    async function ensureLocal() {
+        if (lReady) return true; if (lFailed) return false;
+        if (!lLoading) lLoading = (async () => {
+            try {
+                if (!G.faceapi) await loadScript('vendor-face-api.js');
+                const fa = G.faceapi, tf = fa.tf;
+                if (IN_WORKER) {
+                    const O = () => new OffscreenCanvas(1, 1);
+                    fa.env.setEnv({ Canvas: OffscreenCanvas, CanvasRenderingContext2D: G.OffscreenCanvasRenderingContext2D, Image: OffscreenCanvas, ImageData, Video: OffscreenCanvas,
+                        createCanvasElement: O, createImageElement: O, createVideoElement: O, fetch: (...a) => fetch(...a), readFile: () => { throw new Error('no file system'); } });
+                }
+                try { await tf.setBackend('webgl'); } catch (e) { await tf.setBackend('cpu'); }
+                await tf.ready();
+                await fa.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                await fa.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await fa.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+                lReady = true;
+            } catch (e) { console.warn('AASmart: face models unavailable', e); lFailed = true; }
+        })();
+        await lLoading; return lReady;
+    }
+
+    // ---------- worker client (page side) ----------
+    let worker = null, wStart = null, wSeq = 0, mode = null;
+    const wPend = new Map();
+    function startWorker() {
+        if (wStart) return wStart;
+        wStart = new Promise(res => {
+            try {
+                worker = new Worker('aa-smart-worker.js');
+                worker.onmessage = e => {
+                    const m = e.data;
+                    if (m.type === 'init') { res(!!m.ok && m.backend === 'webgl'); return; }
+                    const p = wPend.get(m.id); if (!p) return; wPend.delete(m.id);
+                    if (m.error) p.rej(new Error(m.error)); else p.res(m.res);
+                };
+                worker.onerror = e => { console.warn('AASmart: worker error', e.message || e); res(false); mode = 'local'; for (const p of wPend.values()) p.rej(new Error('worker')); wPend.clear(); };
+                worker.postMessage({ type: 'init' });
+                setTimeout(() => res(false), 90000);
+            } catch (e) { res(false); }
+        });
+        return wStart;
+    }
+    function workerDetect(c) {
+        const im = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
+        return new Promise((res, rej) => {
+            const id = ++wSeq; wPend.set(id, { res, rej });
+            worker.postMessage({ type: 'detect', id, w: im.width, h: im.height, buf: im.data.buffer }, [im.data.buffer]);
+        });
+    }
+
     async function ensure() {
         if (ready) return true; if (failed) return false;
         if (!loading) loading = (async () => {
-            try {
-                if (!window.faceapi) await loadScript('vendor-face-api.js');
-                if (!window.SmartCrop && !window.smartcrop) { try { await loadScript('smartcrop.js'); } catch (e) {} }
-                const tf = faceapi.tf;
-                try { await tf.setBackend('webgl'); } catch (e) { await tf.setBackend('cpu'); }
-                await tf.ready();
-                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-                ready = true;
-            } catch (e) { console.warn('AASmart: face models unavailable', e); failed = true; }
+            if (!IN_WORKER && !G.SmartCrop && !G.smartcrop) { try { await loadScript('smartcrop.js'); } catch (e) {} }
+            if (!IN_WORKER && typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' && await startWorker()) { mode = 'worker'; ready = true; return; }
+            if (worker) { try { worker.terminate(); } catch (e) {} worker = null; }
+            if (await ensureLocal()) { mode = 'local'; ready = true; } else failed = true;
         })();
         await loading; return ready;
     }
@@ -107,7 +160,7 @@
             let bmp; try { bmp = await bitmapOf(file); } catch (e) { return info; }
             info.w = bmp.width; info.h = bmp.height;
             const k = A / Math.max(bmp.width, bmp.height), cw = Math.max(1, Math.round(bmp.width * k)), ch = Math.max(1, Math.round(bmp.height * k));
-            const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+            const c = mkCanvas(cw, ch);
             const ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(bmp, 0, 0, cw, ch); bmp.close && bmp.close();
             const { g, d } = grayOf(ctx, cw, ch);
             info.sharp = lapVar(g, cw, ch);
@@ -120,10 +173,10 @@
 
     // ---------- people and animals (only for photos without a face) ----------
     async function detectSubjects(c) {
-        const tf = faceapi.tf, cw = c.width, ch = c.height;
+        const tf = G.faceapi.tf, cw = c.width, ch = c.height;
         // pad to a square (grey) instead of stretching: the detector is far more confident on undistorted frames
         const S = Math.max(cw, ch), ox0 = (S - cw) / 2, oy0 = (S - ch) / 2;
-        const sq0 = document.createElement('canvas'); sq0.width = sq0.height = S;
+        const sq0 = mkCanvas(S, S);
         const g0 = sq0.getContext('2d'); g0.fillStyle = '#808080'; g0.fillRect(0, 0, S, S); g0.drawImage(c, ox0, oy0);
         const inp = tf.tidy(() => tf.image.resizeBilinear(tf.cast(tf.browser.fromPixels(sq0), 'float32').expandDims(0), [512, 512]));
         const det = OBJ.execute(inp, ['tower_0/detections']); const arr = (await det.array())[0]; tf.dispose([inp, det]);
@@ -153,7 +206,7 @@
         if (main && POSE) {
             const ex = 0.15, bx = clamp(main.x - main.w * ex) * cw, by = clamp(main.y - main.h * ex) * ch;
             const bw = Math.min(cw - bx, main.w * (1 + 2 * ex) * cw), bh = Math.min(ch - by, main.h * (1 + 2 * ex) * ch), side = Math.max(bw, bh);
-            const sq = document.createElement('canvas'); sq.width = sq.height = 192;
+            const sq = mkCanvas(192, 192);
             const sx = sq.getContext('2d'); sx.fillStyle = '#000'; sx.fillRect(0, 0, 192, 192);
             const k = 192 / side, ox = (side - bw) / 2 * k, oy = (side - bh) / 2 * k;
             sx.drawImage(c, bx, by, bw, bh, ox, oy, bw * k, bh * k);
@@ -172,13 +225,15 @@
     async function detectFaces(c, g, cw, ch, rot) {
         let src = c;
         if (rot) {
-            src = document.createElement('canvas'); src.width = ch; src.height = cw;
+            src = mkCanvas(ch, cw);
             const x = src.getContext('2d');
             if (rot > 0) { x.translate(ch, 0); x.rotate(Math.PI / 2); } else { x.translate(0, cw); x.rotate(-Math.PI / 2); }
             x.drawImage(c, 0, 0);
         }
         const back = (u, v) => rot === 0 ? { x: u, y: v } : rot > 0 ? { x: v, y: ch - u } : { x: cw - v, y: u };
-        const det = await faceapi.detectAllFaces(src, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.45, maxResults: 12 })).withFaceLandmarks().withFaceExpressions();
+        const fa = G.faceapi, px = fa.tf.browser.fromPixels(src);   // a tensor works the same in the page and in a worker
+        let det; try { det = await fa.detectAllFaces(px, new fa.SsdMobilenetv1Options({ minConfidence: 0.45, maxResults: 12 })).withFaceLandmarks().withFaceExpressions(); }
+        finally { px.dispose(); }
         const out = [];
         for (const r of det) {
             const b = r.detection.box, pts = r.landmarks.positions;
@@ -199,6 +254,32 @@
         return out;
     }
 
+    // faces; people/animals when there is no clear face; rotated faces as a last resort
+    async function detectAll(c) {
+        const cw = c.width, ch = c.height, r = { faces: [], subjects: [], head: null };
+        try {
+            const { g } = grayOf(c.getContext('2d', { willReadFrequently: true }), cw, ch);
+            // upright faces first
+            r.faces = (await detectFaces(c, g, cw, ch, 0)).sort((a, b) => b.w * b.h - a.w * a.h);
+        } catch (e) { console.warn('AASmart: face detection failed', e); }
+        const maxFace = r.faces.reduce((m, f) => Math.max(m, f.w), 0);
+        if (maxFace < 0.07 && await ensureBody()) {   // no face, or only small ones (crowd): look for the actual subject
+            try { Object.assign(r, await detectSubjects(c)); } catch (e) { console.warn('AASmart: subject detection failed', e); }
+        }
+        // still no face: try the frame turned 90° both ways (people lying, leaning, upside-down riders),
+        // unless the pose model already found the head of an upright main person — that saves two passes
+        const mp = (r.subjects || []).find(o => o.main && o.label === 'person');
+        if (!r.faces.length && !(mp && r.head && mp.h > mp.w * 1.1)) {
+            try {
+                const { g } = grayOf(c.getContext('2d', { willReadFrequently: true }), cw, ch);
+                const A1 = await detectFaces(c, g, cw, ch, 1), B1 = await detectFaces(c, g, cw, ch, -1);
+                const best = (L) => L.reduce((m, f) => Math.max(m, f.conf), 0);
+                r.faces = (best(A1) >= best(B1) ? A1 : B1).filter(f => f.conf >= 0.6).sort((a, b) => b.w * b.h - a.w * a.h);
+            } catch (e) { console.warn('AASmart: rotated face detection failed', e); }
+        }
+        return r;
+    }
+
     // ---------- stage 2: full analysis ----------
     const KEEP = ['w', 'h', 'sharp', 'mean', 'sd', 'hi', 'lo', 'colorful', 'faces', 'subjects', 'head'];
     async function analyze(file) {
@@ -211,27 +292,10 @@
             if (!base.ok) return info;
             const c = base.canvas, cw = c.width, ch = c.height;
             if (await ensure()) {
-                try {
-                    const { g } = grayOf(c.getContext('2d', { willReadFrequently: true }), cw, ch);
-                    // upright faces first
-                    info.faces = (await detectFaces(c, g, cw, ch, 0)).sort((a, b) => b.w * b.h - a.w * a.h);
-                } catch (e) { console.warn('AASmart: face detection failed', e); }
-                const maxFace = info.faces.reduce((m, f) => Math.max(m, f.w), 0);
-                if (maxFace < 0.07 && await ensureBody()) {   // no face, or only small ones (crowd): look for the actual subject
-                    try { Object.assign(info, await detectSubjects(c)); } catch (e) { console.warn('AASmart: subject detection failed', e); }
-                }
-                // still no face: try the frame turned 90° both ways (people lying, leaning, upside-down riders),
-                // unless the pose model already found the head of an upright main person — that saves two passes
-                const mp = (info.subjects || []).find(o => o.main && o.label === 'person');
-                if (!info.faces.length && !(mp && info.head && mp.h > mp.w * 1.1)) {
-                    try {
-                        const { g } = grayOf(c.getContext('2d', { willReadFrequently: true }), cw, ch);
-                        const A1 = await detectFaces(c, g, cw, ch, 1), B1 = await detectFaces(c, g, cw, ch, -1);
-                        const best = (L) => L.reduce((m, f) => Math.max(m, f.conf), 0);
-                        info.faces = (best(A1) >= best(B1) ? A1 : B1).filter(f => f.conf >= 0.6).sort((a, b) => b.w * b.h - a.w * a.h);
-                    } catch (e) { console.warn('AASmart: rotated face detection failed', e); }
-                }
-                const rec = {}; KEEP.forEach(key => rec[key] = info[key]); idbPut(k, rec);
+                let r = null;
+                if (mode === 'worker') { try { r = await workerDetect(c); } catch (e) { console.warn('AASmart: worker detection failed, using the page', e); mode = 'local'; } }
+                if (!r && await ensureLocal()) r = await detectAll(c);
+                if (r) { Object.assign(info, r); const rec = {}; KEEP.forEach(key => rec[key] = info[key]); idbPut(k, rec); }
             }
             info.ok = true; await yieldUI(); return info;
         })();
@@ -338,7 +402,7 @@
             }
             return { x, y, w: cw, h: ch };
         } else {
-            const sc = window.smartcrop || window.SmartCrop, cv = sc ? await canvasOf(info) : null;
+            const sc = G.smartcrop || G.SmartCrop, cv = sc ? await canvasOf(info) : null;
             if (sc && cv) {
                 const k = cv.width / W, key = r.toFixed(3);
                 info._sc = info._sc || {};
@@ -363,7 +427,7 @@
     }
 
     // preload the face models when the browser is idle, so the first photos are analysed without a wait
-    try { (window.requestIdleCallback || (f => setTimeout(f, 1500)))(() => ensure(), { timeout: 4000 }); } catch (e) {}
+    if (!IN_WORKER) { try { (G.requestIdleCallback || (f => setTimeout(f, 1500)))(() => ensure(), { timeout: 4000 }); } catch (e) {} }
 
-    window.AASmart = { ensure, ensureBody, analyzeCheap, analyze, rank, pickBest, cropBox, get ready() { return ready; }, get failed() { return failed; } };
+    G.AASmart = { ensure, ensureBody, analyzeCheap, analyze, rank, pickBest, cropBox, _init: ensureLocal, _detectAll: detectAll, get mode() { return mode; }, get ready() { return ready; }, get failed() { return failed; } };
 })();
