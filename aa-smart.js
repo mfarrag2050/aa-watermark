@@ -8,7 +8,8 @@
  *   AASmart.analyze(file)            -> full info: faces; if none, people/animals + head point (cached, also in IndexedDB)
  *   AASmart.rank(infos)              -> infos get .score (0..100) and .why[]
  *   AASmart.pickBest(infos, n)       -> indices of the best n, skipping near-duplicates
- *   AASmart.cropBox(info, tw, th)    -> {x, y, w, h} in original pixels, or null
+ *   AASmart.cropBox(info, tw, th, o) -> {x, y, w, h} in original pixels, or null
+ *        o.safeTop: share of the frame height kept clear of heads (story UI);  o.logo: {x0,y0,x1,y1} logo area in 0..1 of the frame
  *
  * The heavy part (face / people / pose models) runs in a Web Worker (aa-smart-worker.js, which loads this
  * same file) so the panel never freezes; if the browser can't run WebGL in a worker it falls back to the page.
@@ -360,13 +361,68 @@
     }
 
     // ---------- cropping ----------
-    async function cropBox(info, tw, th) {
+    // after the first placement: story safe zone, logo corner, faces sliced by the frame edge
+    function refine(info, box, keys, o, W, H) {
+        if (!box || !keys || !keys.length) return box;
+        let { x, y, w: cw, h: ch } = box;
+        const kx0 = Math.min(...keys.map(k => k.x0)), kx1 = Math.max(...keys.map(k => k.x1)), ky0 = Math.min(...keys.map(k => k.y0)), ky1 = Math.max(...keys.map(k => k.y1));
+        let fits = (X, Y) => X >= -0.5 && Y >= -0.5 && X + cw <= W + 0.5 && Y + ch <= H + 0.5 && kx0 >= X - 1 && kx1 <= X + cw + 1 && ky0 >= Y - 1 && ky1 <= Y + ch + 1;
+        const safeY = Y => !o.safeTop || ky0 >= Y + o.safeTop * ch - 1 || Y <= 0.5;
+        // 1) story: heads stay below the top band where Instagram draws the profile bar
+        if (o.safeTop && ky0 < y + o.safeTop * ch) { const Y = clamp(ky0 - o.safeTop * ch, 0, H - ch); if (fits(x, Y)) y = Y; }
+        // the frame already uses the full height (a landscape photo in a story): zoom in a little, never past the output size
+        if (o.safeTop && y <= 0.5 && ky0 < o.safeTop * ch && o.outH) {
+            const r = cw / ch, ch2 = Math.max(ky0 / o.safeTop, ch / 1.3, o.outH);
+            if (ch2 < ch - 1 && ch2 * r >= kx1 - kx0) {
+                const cw2 = ch2 * r, cx = (kx0 + kx1) / 2, X = clamp(cx - cw2 / 2, 0, W - cw2);
+                if (ky1 <= ch2 && kx0 >= X && kx1 <= X + cw2) { x = X; cw = cw2; ch = ch2; }
+            }
+        }
+        // 2) no face under the logo
+        const L = o.logo;
+        if (L) {
+            const pad = 0.015, hit = (X, Y) => keys.some(k => (k.x1 - X) / cw > L.x0 - pad && (k.x0 - X) / cw < L.x1 + pad && (k.y1 - Y) / ch > L.y0 - pad && (k.y0 - Y) / ch < L.y1 + pad);
+            if (hit(x, y)) {
+                const opts = [];
+                const lx = keys.filter(k => (k.y1 - y) / ch > L.y0 - pad);              // the keys low enough to meet the logo
+                if (L.x0 > 0.5) opts.push([x + Math.max(...lx.map(k => k.x1)) - x - (L.x0 - pad) * cw, y]); // move the frame right: face slides left
+                else opts.push([x - ((L.x1 + pad) * cw - (Math.min(...lx.map(k => k.x0)) - x)), y]);
+                opts.push([x, y + Math.max(...keys.map(k => k.y1)) - y - (L.y0 - pad) * ch]);    // or move it down: face slides up
+                let best = null;
+                for (const [X0, Y0] of opts) { const X = clamp(X0, 0, W - cw), Y = clamp(Y0, 0, H - ch); if (fits(X, Y) && safeY(Y) && !hit(X, Y)) { const d = Math.hypot(X - x, Y - y); if (!best || d < best[2]) best = [X, Y, d]; } }
+                if (best) { x = best[0]; y = best[1]; }
+            }
+        }
+        // 3) a second face sliced by the left/right edge: take it in whole, or leave it out, whichever moves less
+        const others = (info.faces || []).filter(f => f.conf > 0.5 && !keys.some(k => k.face === f));
+        for (const f of others) {
+            const fx0 = f.x * W, fx1 = (f.x + f.w) * W, fy0 = f.y * H, fy1 = (f.y + f.h) * H;
+            if (fy1 < y || fy0 > y + ch) continue;
+            const inside = (Math.min(fx1, x + cw) - Math.max(fx0, x)) / (fx1 - fx0);
+            if (!(inside > 0.12 && inside < 0.88)) continue;
+            const cut = fx0 < x ? [fx0 - 0.03 * cw, fx1 + 0.01 * cw] : [fx1 + 0.03 * cw - cw, fx0 - 0.01 * cw - cw];   // [include, exclude] new x
+            let best = null;
+            for (const X0 of cut) { const X = clamp(X0, 0, W - cw); const d = Math.abs(X - x); if (d <= 0.15 * cw && fits(X, y) && (!L || !keys.some(k => (k.x1 - X) / cw > L.x0 && (k.x0 - X) / cw < L.x1 && (k.y1 - y) / ch > L.y0 && (k.y0 - y) / ch < L.y1))) { if (!best || d < best[1]) best = [X, d]; } }
+            if (best) x = best[0];
+        }
+        return { x, y, w: cw, h: ch };
+    }
+
+    async function cropBox(info, tw, th, o = {}) {
+        o = Object.assign({ outH: th }, o);
+        const b = await cropBase(info, tw, th);
+        if (!b || !b._keys) return b;
+        const keys = b._keys; delete b._keys;
+        return refine(info, b, keys, o, info.w, info.h);
+    }
+
+    async function cropBase(info, tw, th) {
         if (!info || !info.ok || !info.w) return null;
         const W = info.w, H = info.h, r = tw / th;
         let cw, ch;
         if (W / H > r) { ch = H; cw = H * r; } else { cw = W; ch = W / r; }
         if (Math.abs(cw - W) < 2 && Math.abs(ch - H) < 2) return { x: 0, y: 0, w: W, h: H };
-        let cx, eyeY = null, top = null;
+        let cx, eyeY = null, top = null, keys = null;
         let faces = info.faces || [];
         // small faces in the stands must not pull the crop away from the rider/horse in the middle
         const mainS = (info.subjects || []).filter(o => o.main);
@@ -384,6 +440,7 @@
             for (const f of main) { x0 = Math.min(x0, (f.x - 0.35 * f.w) * W); x1 = Math.max(x1, (f.x + 1.35 * f.w) * W); y0 = Math.min(y0, (f.y - 0.45 * f.h) * H); }
             if (x1 - x0 > cw) { x0 = (big.x - 0.35 * big.w) * W; x1 = (big.x + 1.35 * big.w) * W; }   // group too wide: frame the main face
             cx = (x0 + x1) / 2; eyeY = big.eyeY * H; top = y0;
+            keys = main.map(f => ({ x0: (f.x - 0.1 * f.w) * W, x1: (f.x + 1.1 * f.w) * W, y0: (f.y - 0.3 * f.h) * H, y1: (f.y + f.h) * H, face: f }));
             // looking room: shift slightly toward the side the face is turned to (eye-centre vs box-centre)
             const turn = (big.cx - (big.x + big.w / 2)) / big.w; cx += clamp(turn, -0.25, 0.25) * big.w * W * 1.2;
         } else if (info.subjects && info.subjects.length) {
@@ -400,7 +457,10 @@
                 if (y > b.y0 - 0.03 * ch && (hd ? hd.y * H - (b.y0) < 0.5 * ch : true)) y = Math.min(y, b.y0 - 0.03 * ch);
                 y = clamp(y, 0, H - ch);
             }
-            return { x, y, w: cw, h: ch };
+            const hs = Math.max(0.04 * Math.max(W, H), (main.find(o => o.label === 'person') || big).w * W * 0.22);
+            const sk = hd ? [{ x0: hd.x * W - hs, x1: hd.x * W + hs, y0: hd.y * H - hs * 1.1, y1: hd.y * H + hs * 0.8 }]
+                          : [{ x0: Math.max(b.x0, x), x1: Math.min(b.x1, x + cw), y0: b.y0, y1: b.y0 + Math.min(b.y1 - b.y0, ch) * 0.25 }];
+            return { x, y, w: cw, h: ch, _keys: sk };
         } else {
             const sc = G.smartcrop || G.SmartCrop, cv = sc ? await canvasOf(info) : null;
             if (sc && cv) {
@@ -423,7 +483,7 @@
             if (top !== null && top < y) y = Math.max(top, eyeY - 0.5 * ch);    // never slice the top of the head if it fits
             y = clamp(y, 0, H - ch);
         } else y = 0;
-        return { x, y, w: cw, h: ch };
+        return { x, y, w: cw, h: ch, _keys: keys };
     }
 
     // preload the face models when the browser is idle, so the first photos are analysed without a wait

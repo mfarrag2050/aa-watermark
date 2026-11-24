@@ -149,6 +149,21 @@
         .score-chip { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); z-index: 3; padding: 1px 7px; border-radius: 999px;
             background: rgba(17,24,39,.85); color: #fff; font-size: 10.5px; font-weight: 700; cursor: help; white-space: nowrap; }
         .score-chip.top { background: rgba(2,160,100,.95); }
+        .sizes-btn { position: absolute; top: 28px; right: 4px; width: 20px; height: 20px; border-radius: 50%; z-index: 3; cursor: pointer;
+            background: rgba(17,24,39,.85); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; line-height: 1; }
+        .sizes-btn:hover { background: #1a5ed8; }
+        #sizesModal { display: none; position: fixed; inset: 0; z-index: 1002; background: rgba(0,0,0,.74); backdrop-filter: blur(8px);
+            align-items: center; justify-content: center; flex-direction: column; gap: 14px; padding: 12px; box-sizing: border-box; }
+        #sizesRow { display: flex; gap: 14px; align-items: flex-end; justify-content: center; flex-wrap: wrap; max-width: 98vw; }
+        #sizesRow figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #fff; font-size: 12px; font-weight: 600; }
+        #sizesRow .sz { position: relative; background: #111; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+        #sizesRow .sz canvas { display: block; width: 100%; height: 100%; }
+        #sizesRow .safe-band { position: absolute; left: 0; right: 0; top: 0; height: 13.02%; border-bottom: 1px dashed rgba(255,255,255,.8);
+            background: repeating-linear-gradient(45deg, rgba(255,255,255,.16) 0 6px, rgba(255,255,255,.04) 6px 12px); }
+        #sizesBar { display: flex; align-items: center; gap: 12px; color: #fff; font-size: 13px; }
+        #sizesBar .preview-btn { width: 36px; height: 36px; }
+        #sizesClose { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; background: #ef4444; color: #fff; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
         #smartRow { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
         #smartPickBtn { width: auto !important; flex: 0 0 auto; margin: 0 !important; padding: 8px 14px; border: 0; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; color: #fff;
             background: linear-gradient(135deg, #7c3aed, #2b7cff); box-shadow: 0 4px 12px rgba(124,58,237,.25); }
@@ -700,6 +715,12 @@
       </div>
     </div><!-- /tab-reels -->
 
+    <div id="sizesModal">
+        <div id="sizesClose">✕</div>
+        <div id="sizesRow"></div>
+        <div id="sizesBar"><div id="sizesPrev" class="preview-btn">&#10094;</div><span id="sizesInfo"></span><div id="sizesNext" class="preview-btn">&#10095;</div></div>
+    </div>
+
     <div id="previewModal">
         <div id="closeModalBtn">✕</div>
         <div id="cropEditorContainer">
@@ -813,7 +834,7 @@
         w_cards_hint:"Başlık ve tasarım stilleri (Stil 01 · Stil 02 · 3 Satır · Son dakika) için <a data-go='tabC'>Kartlar</a> sekmesini kullanın — X + Instagram + Story tek seferde iner.",
         sm_btn:"✨ En iyi fotoğrafları seç", sm_count:"Kaç fotoğraf seçilsin (1–20)", sm_crop:"Akıllı kırpma", sm_crop_title:"Elle kırpılmayan fotoğraflar yüze ve konuya göre kırpılır (Instagram, X, Story ve GIF).",
         sm_loading:"Akıllı analiz hazırlanıyor…", sm_prescan:(i,n)=>`Ön tarama… ${i}/${n}`, sm_analyzing:(i,n)=>`En güçlü adaylar inceleniyor… ${i}/${n}`, sm_done:(k,r)=>`En iyi ${k} fotoğraf seçildi · ${r} fotoğraf elendi`, sm_nomodel:"Yüz modeli yüklenemedi; seçim netlik, ışık ve çözünürlüğe göre yapıldı.",
-        sm_parked:(n)=>`Elenenler (${n}) — geri almak için tıklayın`, sm_restore_all:"Tümünü geri al", sm_score:"Puan", b_smart:"Akıllı kırpma",
+        sm_parked:(n)=>`Elenenler (${n}) — geri almak için tıklayın`, sm_restore_all:"Tümünü geri al", sm_score:"Puan", b_smart:"Akıllı kırpma", sz_open:"Üç ölçüde önizle (Instagram · X · Story)", sz_safe:"Story: üst 250 px Instagram profil çubuğunun altında kalır", sz_rendering:"Hazırlanıyor…",
         sm_why:{sharp:"net", soft:"bulanık", dark:"karanlık", bright:"aşırı parlak", eyes:"gözler kapalı", mouth:"konuşurken yakalanmış", cut:"yüz kadraj dışında", face:"yüz net ve iyi", lowres:"düşük çözünürlük"},
         gif_square:"GIF her zaman kare: 1080×1080",
         w_gifdelay:"GIF kare süresi:", w_story:"Story", w_copy:"Kopyala", w_copied:"Kopyalandı ✓", w_archive:"Çekim tarihi haberden eskiyse fotoğraf arşivdendir",
@@ -883,7 +904,7 @@
         w_cards_hint:"For a headline and design styles (Style 01 · Style 02 · 3 Lines · Breaking) use the <a data-go='tabC'>Cards</a> tab — X + Instagram + Story export together.",
         sm_btn:"✨ Pick the best photos", sm_count:"How many to keep (1–20)", sm_crop:"Smart crop", sm_crop_title:"Photos you did not crop by hand are framed around faces and the subject (Instagram, X, Story and GIF).",
         sm_loading:"Preparing smart analysis…", sm_prescan:(i,n)=>`Quick scan… ${i}/${n}`, sm_analyzing:(i,n)=>`Analysing the strongest candidates… ${i}/${n}`, sm_done:(k,r)=>`Kept the best ${k} · ${r} set aside`, sm_nomodel:"Face model could not load; picked by sharpness, light and resolution only.",
-        sm_parked:(n)=>`Set aside (${n}) — click one to bring it back`, sm_restore_all:"Restore all", sm_score:"Score", b_smart:"Smart crop",
+        sm_parked:(n)=>`Set aside (${n}) — click one to bring it back`, sm_restore_all:"Restore all", sm_score:"Score", b_smart:"Smart crop", sz_open:"Preview in three sizes (Instagram · X · Story)", sz_safe:"Story: the top 250 px sit under Instagram's profile bar", sz_rendering:"Rendering…",
         sm_why:{sharp:"sharp", soft:"soft", dark:"dark", bright:"too bright", eyes:"eyes closed", mouth:"caught mid-word", cut:"face cut off", face:"good face", lowres:"low resolution"},
         gif_square:"GIF is always square: 1080×1080",
         w_gifdelay:"GIF frame time:", w_story:"Story", w_copy:"Copy", w_copied:"Copied ✓", w_archive:"If the shot date is older than the story, the photo is from the archive",
@@ -1030,6 +1051,7 @@
     } catch (e) {}
     leftLogoCheckbox.addEventListener('change', function () {
         try { localStorage.setItem('aa_leftLogoEnabled', this.checked); } catch (e) {}
+        if (selectedFiles.length) frameThumbs();      // the crop keeps faces away from the logo corner
     });
 
     /* ---------- v2 option states ---------- */
@@ -1130,6 +1152,10 @@
             wrapper.appendChild(img);
             wrapper.appendChild(chip);
             wrapper.appendChild(removeBtn);
+            const szBtn = document.createElement('div');
+            szBtn.className = 'sizes-btn'; szBtn.textContent = '⧉'; szBtn.title = t('sz_open');
+            szBtn.addEventListener('click', ev => { ev.stopPropagation(); openSizes(index); });
+            wrapper.appendChild(szBtn);
 
             const badge = document.createElement("div");
             const smartOn = smartCropOn() && !file.isCropped;
@@ -1780,11 +1806,62 @@
     document.getElementById('smartCropCheckbox').addEventListener('change', (e) => { try { localStorage.setItem('aa_smartcrop', e.target.checked); } catch (er) {} renderThumbnails(); });
 
     // crop box for a file at the given output size, in original pixels (+ the analysed size), or null
+    // ---------- one photo in the three publishing sizes, exactly as it will be exported (logo included) ----------
+    const SIZES = [{ w: 1080, h: 1350, label: 'Instagram 4:5' }, { w: 1080, h: 720, label: 'X 3:2' }, { w: 1080, h: 1920, label: 'Story 9:16' }];
+    const sizesModal = document.getElementById('sizesModal');
+    let szIndex = 0, szToken = 0;
+    async function renderSizes() {
+        const tok = ++szToken, file = selectedFiles[szIndex]; if (!file) return;
+        const row = document.getElementById('sizesRow'); row.innerHTML = '';
+        document.getElementById('sizesInfo').textContent = (szIndex + 1) + ' / ' + selectedFiles.length + ' · ' + t('sz_rendering');
+        const aw = Math.min(window.innerWidth * 0.96, 1500) - 2 * 14 - 8, ah = window.innerHeight - 140;
+        let h = Math.min(ah, aw / SIZES.reduce((a, z) => a + z.w / z.h, 0));
+        const wrapNeeded = h < 150; if (wrapNeeded) h = Math.min(ah * 0.48, (aw - 14) / (SIZES[0].w / SIZES[0].h + SIZES[2].w / SIZES[2].h));
+        const cur = getTargetDimensions();
+        const boxes = SIZES.map(z => {
+            const fig = document.createElement('figure'), box = document.createElement('div'); box.className = 'sz';
+            box.style.height = Math.round(h) + 'px'; box.style.width = Math.round(h * z.w / z.h) + 'px';
+            const cap = document.createElement('figcaption'); cap.textContent = z.label;
+            if (z.h === 1920) { const band = document.createElement('div'); band.className = 'safe-band'; band.title = t('sz_safe'); box.appendChild(band); }
+            fig.appendChild(box); fig.appendChild(cap); row.appendChild(fig); return box;
+        });
+        for (let k = 0; k < SIZES.length; k++) {
+            const z = SIZES[k], same = cur.w === z.w && cur.h === z.h;
+            const cv = await processImage(file, same ? cropDataArray[szIndex] : null, true, { w: z.w, h: z.h });
+            if (tok !== szToken) return;
+            boxes[k].insertBefore(cv, boxes[k].firstChild);
+        }
+        document.getElementById('sizesInfo').textContent = (szIndex + 1) + ' / ' + selectedFiles.length + ' · ' + (file.name || '');
+    }
+    function openSizes(i) { szIndex = i; sizesModal.style.display = 'flex'; renderSizes(); }
+    function closeSizes() { sizesModal.style.display = 'none'; szToken++; document.getElementById('sizesRow').innerHTML = ''; }
+    document.getElementById('sizesClose').addEventListener('click', closeSizes);
+    sizesModal.addEventListener('mousedown', e => { if (e.target === sizesModal) closeSizes(); });
+    document.getElementById('sizesPrev').addEventListener('click', () => { szIndex = (szIndex - 1 + selectedFiles.length) % selectedFiles.length; renderSizes(); });
+    document.getElementById('sizesNext').addEventListener('click', () => { szIndex = (szIndex + 1) % selectedFiles.length; renderSizes(); });
+    document.addEventListener('keydown', e => {
+        if (sizesModal.style.display !== 'flex') return;
+        if (e.key === 'Escape') closeSizes();
+        else if (e.key === 'ArrowLeft') document.getElementById('sizesPrev').click();
+        else if (e.key === 'ArrowRight') document.getElementById('sizesNext').click();
+    });
+
+    // where the AA logo lands in a frame of this size (0..1), so the crop keeps faces out from under it
+    function logoRectFor(tw, th) {
+        if (tw === 1080 && th === 1920) return { x0: 62 / 1080, y0: 1731 / 1920, x1: 141 / 1080, y1: 1810 / 1920 };
+        const left = document.getElementById('leftLogoCheckbox').checked;
+        const is978 = tw === 978 && th === 548, is486 = tw === 864 && th === 486;
+        const lg = (is978 ? cachedAALogo978 : is486 ? cachedLogo486 : cachedLogo) || { width: 120, height: 120 };
+        const m = is978 ? 50 : 53, mb = is978 ? 38 : 53;
+        const x = left ? m : tw - lg.width - m, y = th - lg.height - mb;
+        return { x0: x / tw, y0: y / th, x1: (x + lg.width) / tw, y1: (y + lg.height) / th };
+    }
     async function smartBoxFor(file, tw, th) {
         if (!smartCropOn() || !window.AASmart) return null;
         try {
             const inf = await AASmart.analyze(keyOf(file)); if (!inf || !inf.ok) return null;
-            const b = await AASmart.cropBox(inf, tw, th); return b ? Object.assign({ iw: inf.w, ih: inf.h }, b) : null;
+            // story: keep heads out of the top 250px, where Instagram draws the profile bar
+            const b = await AASmart.cropBox(inf, tw, th, { safeTop: th / tw > 1.7 ? 250 / 1920 : 0, logo: logoRectFor(tw, th) }); return b ? Object.assign({ iw: inf.w, ih: inf.h }, b) : null;
         } catch (e) { return null; }
     }
     // show each thumbnail framed the way it will be exported
