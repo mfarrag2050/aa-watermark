@@ -297,6 +297,7 @@
         .cv-style.active { background:#2b7cff; color:#fff; border-color:#2b7cff; }
         #cvDrop { border:2px dashed #2b7cff; border-radius:14px; padding:22px 14px; text-align:center; background:#fff; cursor:pointer; font-size:13px; font-weight:500; color:#444; transition:.2s ease; }
         #cvDrop:hover { background:#eef4ff; }
+        #cvDrop.drag { background:#eef4ff; border-color:#2b7cff; }
         #cvDrop.hasimg { border-style:solid; border-color:#10b981; color:#059669; background:#f0fdf7; }
         #cvHeadline, #cvKicker, #cvSource { width:100%; padding:10px 12px; border:2px solid #e5e7eb; border-radius:10px; font-family:'HNArabic','Inter',sans-serif; font-size:15px; direction:rtl; box-sizing:border-box; }
         #cvHeadline { resize:vertical; }
@@ -343,6 +344,15 @@
             .crop-toolbar { gap:10px; }
         }
         .cv-prev-item { display:flex; flex-direction:column; align-items:center; gap:8px; }
+        .cv-prev-btns { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+        .cv-prev-btns .cv-mini-btn { margin-top:4px; }
+        .cv-main-btn[hidden] { display:none; }
+        .cv-prev-item canvas.cv-dragover { outline:3px dashed #10b981; outline-offset:3px; }
+        .cv-own-tag { font-size:10.5px; font-weight:700; color:#059669; }
+        #cvDrop.hasimg { display:flex; align-items:center; gap:12px; justify-content:center; padding:10px 14px; }
+        #cvDrop .cv-drop-thumb { width:64px; height:44px; object-fit:cover; border-radius:6px; flex-shrink:0; }
+        #cvDrop .cv-drop-txt { display:flex; flex-direction:column; gap:2px; text-align:start; }
+        #cvDrop .cv-drop-txt small { font-weight:500; color:#4b5563; font-size:11.5px; }
         .cv-prev-label { font-size:11px; font-weight:700; letter-spacing:.03em; color:#556; }
         #cvPrevSq, #cvPrevPt, #cvPrevSt { width:100%; max-width:300px; height:auto; border-radius:10px; border:1px solid #e5e7eb; background:#111; box-shadow:0 6px 18px rgba(0,0,0,.12); cursor:pointer; }
         #cvPrevSq { aspect-ratio:1/1; }
@@ -510,6 +520,7 @@
             <div class="pp-row"><button class="pp-btn" id="cvImportBtn">⤵ Get image</button></div>
             <div id="cvDrop">Drag a cover photo, or click</div>
             <input type="file" id="cvFileInput" accept="image/*" style="display:none">
+            <input type="file" id="cvOwnInput" accept="image/*" style="display:none">
           </div>
 
           <div class="cv-section" id="cvTextSec">
@@ -637,17 +648,29 @@
             <div class="cv-prev-item">
               <div class="cv-prev-label">X · 1080×1080</div>
               <canvas id="cvPrevSq" width="1080" height="1080"></canvas>
-              <button id="cvRecropSq" class="cv-mini-btn" disabled>Re-crop</button>
+              <div class="cv-prev-btns">
+                <button id="cvRecropSq" class="cv-mini-btn" disabled>Re-crop</button>
+                <button id="cvOwnSq" class="cv-mini-btn cv-own-btn">🖼 Photo</button>
+                <button id="cvMainSq" class="cv-mini-btn cv-main-btn" hidden>↺</button>
+              </div>
             </div>
             <div class="cv-prev-item">
               <div class="cv-prev-label">Instagram · 1080×1440</div>
               <canvas id="cvPrevPt" width="1080" height="1440"></canvas>
-              <button id="cvRecropPt" class="cv-mini-btn" disabled>Re-crop</button>
+              <div class="cv-prev-btns">
+                <button id="cvRecropPt" class="cv-mini-btn" disabled>Re-crop</button>
+                <button id="cvOwnPt" class="cv-mini-btn cv-own-btn">🖼 Photo</button>
+                <button id="cvMainPt" class="cv-mini-btn cv-main-btn" hidden>↺</button>
+              </div>
             </div>
             <div class="cv-prev-item">
               <div class="cv-prev-label">Story · 1080×1920</div>
               <canvas id="cvPrevSt" width="1080" height="1920"></canvas>
-              <button id="cvRecropSt" class="cv-mini-btn" disabled>Re-crop</button>
+              <div class="cv-prev-btns">
+                <button id="cvRecropSt" class="cv-mini-btn" disabled>Re-crop</button>
+                <button id="cvOwnSt" class="cv-mini-btn cv-own-btn">🖼 Photo</button>
+                <button id="cvMainSt" class="cv-mini-btn cv-main-btn" hidden>↺</button>
+              </div>
             </div>
             <div class="cv-hint" id="cvHint" style="margin-top:4px;">Live preview</div>
           </div>
@@ -894,7 +917,7 @@
         cv_sample:"Örnek",
         cv_crop:"Kırp",
         cv_grad:"Gradyan", cv_darkness:"Koyuluk", cv_reach:"Uzunluk",
-        cv_sec_photo:"Fotoğraf", cv_sec_text:"Stil ve metin", cv_recrop:"Yeniden kırp",
+        cv_sec_photo:"Fotoğraf", cv_sec_text:"Stil ve metin", cv_recrop:"Yeniden kırp", cv_own:"🖼 Fotoğraf", cv_own_title:"Yalnız bu ölçü için başka fotoğraf seç (veya fotoğrafı önizlemenin üzerine sürükleyin)", cv_main:"↺ Ana fotoğraf", cv_main_title:"Bu ölçüde de ana fotoğrafı kullan", cv_own_tag:"özel fotoğraf", cv_badimg:"Bu dosya açılamadı", cv_drop_change:"Değiştirmek için tıklayın veya yeni fotoğraf sürükleyin",
         cv_brk:"Son dakika", cv_source:"Kaynak",
         fn_proc:(a,b)=>`İşleniyor... ${a}/${b}`,
         fn_zip:(n)=>`${n} görsel ZIP olarak indirildi ✓`,
@@ -964,7 +987,7 @@
         cv_sample:"Sample",
         cv_crop:"Crop",
         cv_grad:"Gradient", cv_darkness:"Darkness", cv_reach:"Reach",
-        cv_sec_photo:"Photo", cv_sec_text:"Style & text", cv_recrop:"Re-crop",
+        cv_sec_photo:"Photo", cv_sec_text:"Style & text", cv_recrop:"Re-crop", cv_own:"🖼 Photo", cv_own_title:"Pick a different photo for this size only (or drag one onto the preview)", cv_main:"↺ Main photo", cv_main_title:"Use the main photo in this size again", cv_own_tag:"own photo", cv_badimg:"This file could not be opened", cv_drop_change:"Click or drag a new photo to replace it",
         cv_brk:"Breaking", cv_source:"Source",
         fn_proc:(a,b)=>`Processing... ${a}/${b}`,
         fn_zip:(n)=>`${n} images downloaded as ZIP ✓`,
@@ -1029,7 +1052,9 @@
       g('cvLblGrad').textContent = t('cv_grad'); g('cvLblOpacity').textContent = t('cv_darkness'); g('cvLblReach').textContent = t('cv_reach');
       if (document.getElementById('cvModeCard')) { g('cvModeCard').textContent = t('cv_mode_card'); g('cvModeVideo').textContent = t('cv_mode_video'); }
       if (document.getElementById('cvVidTitle')) { g('cvVidTitle').textContent = t('cv_vid_title'); g('cvVidChoose').textContent = (typeof cvVidSourceVal !== 'undefined' && cvVidSourceVal === 'image') ? t('cv_vid_choose_img') : t('cv_vid_choose'); g('cvVidSizeLbl').textContent = t('cv_vid_size'); g('cvVidMotionLbl').textContent = t('cv_vid_motion'); g('cvVidExport').textContent = t('cv_vid_export'); if(!cvVidState || !cvVidState.playing) g('cvVidPlay').textContent = t('cv_vid_play'); g('cvVidReplay').textContent = t('cv_vid_replay'); g('cvVidTrimLbl').textContent = t('cv_vid_trim'); g('cvVidAudioLbl').textContent = t('cv_vid_audio'); g('cvVidModeLbl').textContent = t('cv_vid_mode'); g('cvVidVolLbl').textContent = t('cv_vid_music'); g('cvVidAudioMode').options[0].text = t('cv_vid_mix'); g('cvVidAudioMode').options[1].text = t('cv_vid_replace'); if(typeof cvPopulateAudio==='function') cvPopulateAudio(); g('cvVidSegLbl').textContent = t('cv_vid_seglbl'); g('cvSegAdd').textContent = t('cv_vid_add'); g('cvVidGrpSource').textContent = t('cv_vid_grp_source'); g('cvVidGrpOutput').textContent = t('cv_vid_grp_output'); g('cvVidTextLbl').textContent = t('cv_vid_textsize'); g('cvVidBgHint').textContent = t('cv_vid_bghint'); g('cvVidFitLbl').textContent = t('vx_fit'); g('cvVidFit').options[0].text = t('vx_fit_crop'); g('cvVidFit').options[1].text = t('vx_fit_fit'); g('cvVidPanLbl').textContent = t('vx_pan'); if (typeof cvVidUpdateTotal === 'function') cvVidUpdateTotal(); if (document.getElementById('cvSrcVideo')){ g('cvSrcVideo').textContent = t('cv_src_video'); g('cvSrcImage').textContent = t('cv_src_image'); g('cvSrcColor').textContent = t('cv_src_color'); g('cvVidImgCrop').textContent = t('cv_vid_cropimg'); } if(typeof cvRenderSegs==='function') cvRenderSegs(); }
-      g('cvSecPhoto').textContent = t('cv_sec_photo'); g('cvSecText').textContent = (document.getElementById('tabB') && document.getElementById('tabB').classList.contains('active')) ? t('cv_sec_brk') : t('cv_sec_text'); g('cvRecropSq').textContent = t('cv_recrop'); g('cvRecropPt').textContent = t('cv_recrop'); g('cvRecropSt').textContent = t('cv_recrop'); g('wmCardsHint').innerHTML = t('w_cards_hint');
+      g('cvSecPhoto').textContent = t('cv_sec_photo'); g('cvSecText').textContent = (document.getElementById('tabB') && document.getElementById('tabB').classList.contains('active')) ? t('cv_sec_brk') : t('cv_sec_text'); g('cvRecropSq').textContent = t('cv_recrop'); g('cvRecropPt').textContent = t('cv_recrop'); g('cvRecropSt').textContent = t('cv_recrop');
+      ['Sq','Pt','St'].forEach(k => { g('cvOwn' + k).textContent = t('cv_own'); g('cvOwn' + k).title = t('cv_own_title'); g('cvMain' + k).textContent = t('cv_main'); g('cvMain' + k).title = t('cv_main_title'); });
+      try { cvShowMain(); cvSyncOwn(); } catch (e) {} g('wmCardsHint').innerHTML = t('w_cards_hint');
       if (typeof cvUpdateWordCount === 'function') cvUpdateWordCount();
       if (typeof cvRender === 'function' && !document.getElementById('tab-cover').hidden) cvRender();
       g('langTr').classList.toggle('active', LANG === 'tr');
@@ -2181,9 +2206,9 @@
 
     // ===== Dual-size cover: Square 1080x1080 (X) + Portrait 1080x1440 (Instagram) =====
     const cvSizes = [
-        { key:'sq', W:1080, H:1080, canvas:document.getElementById('cvPrevSq'), rc:document.getElementById('cvRecropSq'), fileTag:'square' },
-        { key:'pt', W:1080, H:1440, canvas:document.getElementById('cvPrevPt'), rc:document.getElementById('cvRecropPt'), fileTag:'portrait' },
-        { key:'st', W:1080, H:1920, canvas:document.getElementById('cvPrevSt'), rc:document.getElementById('cvRecropSt'), fileTag:'story' }
+        { key:'sq', W:1080, H:1080, canvas:document.getElementById('cvPrevSq'), rc:document.getElementById('cvRecropSq'), own:document.getElementById('cvOwnSq'), main:document.getElementById('cvMainSq'), fileTag:'square' },
+        { key:'pt', W:1080, H:1440, canvas:document.getElementById('cvPrevPt'), rc:document.getElementById('cvRecropPt'), own:document.getElementById('cvOwnPt'), main:document.getElementById('cvMainPt'), fileTag:'portrait' },
+        { key:'st', W:1080, H:1920, canvas:document.getElementById('cvPrevSt'), rc:document.getElementById('cvRecropSt'), own:document.getElementById('cvOwnSt'), main:document.getElementById('cvMainSt'), fileTag:'story' }
     ];
     let cvCtx = null, CVW = 1080, CVH = 1440;   // set per render pass
 
@@ -2195,7 +2220,11 @@
     const cvSourceWrap = document.getElementById('cvSourceWrap');
     const cvDrop = document.getElementById('cvDrop');
     const cvFileInput = document.getElementById('cvFileInput');
-    const cvState = { style:'s02', img:null, imgURL:null, crop:{ sq:null, pt:null, st:null } };
+    const cvState = { style:'s02', img:null, imgURL:null, imgName:'', crop:{ sq:null, pt:null, st:null }, own:{ sq:null, pt:null, st:null } };
+    // the photo used in one size: its own photo if the editor picked one, otherwise the main cover photo
+    const cvImgFor = key => (cvState.own[key] && cvState.own[key].img) || cvState.img;
+    const cvURLFor = key => (cvState.own[key] && cvState.own[key].url) || cvState.imgURL;
+    const cvAnyImg = () => !!(cvState.img || cvSizes.some(z => cvState.own[z.key]));
     const CV_SAMPLE = {
         head:     "لا سقف يحميهم.. الشتاء يضاعف معاناة _نازحي غزة_",
         title3l:  "الشتاء يضاعف معاناة نازحي غزة",
@@ -2231,7 +2260,7 @@
             document.getElementById('cvCardTextWrap').hidden = true;
             document.getElementById('cvCardSuggestWrap').hidden = true;
             cvSetActiveStyleBtn();
-            document.getElementById('cvExportBtn').disabled = !cvState.img;
+            document.getElementById('cvExportBtn').disabled = !cvAnyImg();
         } else if (which === 'b'){
             cvState.style = 'brk';
             document.getElementById('cvStylesRow').hidden = true;
@@ -2293,7 +2322,7 @@
             cvState.style = b.dataset.style; cvLastCardStyle = b.dataset.style;
             cvSetActiveStyleBtn();
             cvKickerWrap.hidden = (cvState.style !== 's3l');
-            document.getElementById('cvExportBtn').disabled = !cvState.img;
+            document.getElementById('cvExportBtn').disabled = !cvAnyImg();
             cvRenderAll();
         });
     });
@@ -2316,25 +2345,69 @@
     document.getElementById('cvSuggestBreaks').addEventListener('click', cvSuggestLineBreaks);
     document.getElementById('cvAllBold').addEventListener('change', cvRenderAll);
 
-    // photo input
+    // photo input — the main cover photo (all sizes that have no photo of their own)
+    const cvFirstImage = list => [...(list || [])].find(x => x.type && x.type.startsWith('image/'));
     cvDrop.addEventListener('click', () => cvFileInput.click());
-    cvDrop.addEventListener('dragover', e => e.preventDefault());
-    cvDrop.addEventListener('drop', e => { e.preventDefault(); const f = [...e.dataTransfer.files].find(x => x.type && x.type.startsWith('image/')); if (f) cvLoadBlob(f); });
-    cvFileInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) cvLoadBlob(f); });
+    const cvPhotoSec = document.getElementById('cvPhotoSec');
+    cvPhotoSec.addEventListener('dragover', e => { e.preventDefault(); cvDrop.classList.add('drag'); });
+    cvPhotoSec.addEventListener('dragleave', () => cvDrop.classList.remove('drag'));
+    cvPhotoSec.addEventListener('drop', e => { e.preventDefault(); cvDrop.classList.remove('drag'); const f = cvFirstImage(e.dataTransfer.files); if (f) cvLoadBlob(f); });
+    // reset the input after every pick, so choosing the same file again (or a file with the same name) still loads
+    cvFileInput.addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) cvLoadBlob(f); });
 
-    function cvLoadBlob(blob){
-        if (cvState.imgURL) { try { URL.revokeObjectURL(cvState.imgURL); } catch (e) {} }
-        const url = URL.createObjectURL(blob);
-        const im = new Image();
-        im.onload = () => {
-            cvState.img = im; cvState.imgURL = url; cvState.crop = { sq:null, pt:null };
-            cvDrop.classList.add('hasimg'); cvDrop.textContent = t('cv_drop_ok');
-            cvSizes.forEach(s => s.rc.disabled = false);
-            document.getElementById('cvExportBtn').disabled = false;
-            cvEnsureFontsThenRender();
-        };
-        im.src = url;
+    function cvReadImage(blob){
+        return new Promise((res, rej) => { const url = URL.createObjectURL(blob), im = new Image(); im.onload = () => res({ img: im, url }); im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('image')); }; im.src = url; });
     }
+    function cvShowMain(){
+        if (!cvState.img) { cvDrop.classList.remove('hasimg'); cvDrop.textContent = t('cv_drop'); return; }
+        cvDrop.classList.add('hasimg'); cvDrop.innerHTML = '';
+        const th = document.createElement('img'); th.className = 'cv-drop-thumb'; th.src = cvState.imgURL;
+        const tx = document.createElement('div'); tx.className = 'cv-drop-txt';
+        const a = document.createElement('span'); a.textContent = t('cv_drop_ok') + (cvState.imgName ? ' · ' + cvState.imgName : '');
+        const b = document.createElement('small'); b.textContent = t('cv_drop_change');
+        tx.appendChild(a); tx.appendChild(b); cvDrop.appendChild(th); cvDrop.appendChild(tx);
+    }
+    function cvSyncOwn(){
+        cvSizes.forEach(z => {
+            const own = !!cvState.own[z.key];
+            z.main.hidden = !own;
+            z.rc.disabled = !cvImgFor(z.key);
+            const lab = z.canvas.parentElement.querySelector('.cv-prev-label');
+            let tag = lab.querySelector('.cv-own-tag');
+            if (own && !tag) { tag = document.createElement('span'); tag.className = 'cv-own-tag'; lab.appendChild(tag); }
+            if (tag) { if (own) tag.textContent = ' · ' + t('cv_own_tag'); else tag.remove(); }
+        });
+        document.getElementById('cvExportBtn').disabled = !cvAnyImg() && cvState.style !== 'brk';
+    }
+    async function cvLoadBlob(blob){
+        let r; try { r = await cvReadImage(blob); } catch (e) { cvSetStatus(t('cv_badimg') || '⚠'); return; }
+        if (cvState.imgURL && !cvSizes.some(z => cvState.own[z.key] && cvState.own[z.key].url === cvState.imgURL)) { try { URL.revokeObjectURL(cvState.imgURL); } catch (e) {} }
+        cvState.img = r.img; cvState.imgURL = r.url; cvState.imgName = blob.name || '';
+        cvSizes.forEach(z => { if (!cvState.own[z.key]) cvState.crop[z.key] = null; });   // a new photo starts from a fresh crop
+        cvShowMain(); cvSyncOwn();
+        cvEnsureFontsThenRender();
+    }
+    // a photo for one size only (X, Instagram or Story)
+    async function cvLoadOwn(key, blob){
+        let r; try { r = await cvReadImage(blob); } catch (e) { return; }
+        const old = cvState.own[key]; if (old) { try { URL.revokeObjectURL(old.url); } catch (e) {} }
+        cvState.own[key] = { img: r.img, url: r.url, name: blob.name || '' }; cvState.crop[key] = null;
+        cvSyncOwn(); cvEnsureFontsThenRender();
+    }
+    function cvDropOwn(key){
+        const o = cvState.own[key]; if (!o) return;
+        try { URL.revokeObjectURL(o.url); } catch (e) {}
+        cvState.own[key] = null; cvState.crop[key] = null; cvSyncOwn(); cvRenderAll();
+    }
+    const cvOwnInput = document.getElementById('cvOwnInput'); let cvOwnKey = null;
+    cvOwnInput.addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f && cvOwnKey) cvLoadOwn(cvOwnKey, f); });
+    cvSizes.forEach(z => {
+        z.own.addEventListener('click', () => { cvOwnKey = z.key; cvOwnInput.click(); });
+        z.main.addEventListener('click', () => cvDropOwn(z.key));
+        z.canvas.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); z.canvas.classList.add('cv-dragover'); });
+        z.canvas.addEventListener('dragleave', () => z.canvas.classList.remove('cv-dragover'));
+        z.canvas.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); z.canvas.classList.remove('cv-dragover'); const f = cvFirstImage(e.dataTransfer.files); if (f) cvLoadOwn(z.key, f); });
+    });
 
     document.getElementById('cvImportBtn').addEventListener('click', () => requestPhotopeaImage('cover'));
     if (!inPhotopea) { const b = document.getElementById('cvImportBtn'); b.disabled = true; b.title = t('import_title_off'); }
@@ -2369,7 +2442,7 @@
         if (target === 'reelitem'){ url = ref && ref.url; const s3 = rlSizeObj(); cvCropRatioVal = s3.W / s3.H; }
         else if (target === 'vidseg'){ url = ref && ref.imgURL; const s2 = cvVidSizeObj(); cvCropRatioVal = s2.W / s2.H; }
         else if (target === 'vid'){ url = cvVidImgURL; const s = cvVidSizeObj(); cvCropRatioVal = s.W / s.H; }
-        else { url = cvState.imgURL; cvCropRatioVal = (target === 'sq') ? 1 : (target === 'st' ? (1080 / 1920) : (1080 / 1440)); }
+        else { url = cvURLFor(target); cvCropRatioVal = (target === 'sq') ? 1 : (target === 'st' ? (1080 / 1920) : (1080 / 1440)); }
         if (!url) return;
         cvCropImg.onload = cvInitCrop;
         if (cvCropImg.src !== url) cvCropImg.src = url;
@@ -2405,8 +2478,8 @@
     document.getElementById('cvCropClose').addEventListener('click', cvCloseCrop);
     cvCropModal.addEventListener('mousedown', e => { if (e.target === cvCropModal) cvCloseCrop(); });
     cvSizes.forEach(s => {
-        s.canvas.addEventListener('click', () => { if (cvState.img) openCvCrop(s.key); });
-        s.rc.addEventListener('click', () => { if (cvState.img) openCvCrop(s.key); });
+        s.canvas.addEventListener('click', () => { if (cvImgFor(s.key)) openCvCrop(s.key); });
+        s.rc.addEventListener('click', () => { if (cvImgFor(s.key)) openCvCrop(s.key); });
     });
 
     // gradient
@@ -2619,9 +2692,10 @@
         const botPad = isStory ? 180 : 0;           // extra bottom margin for s01 / brk
         cvCtx.clearRect(0, 0, CVW, CVH);
         cvCtx.fillStyle = '#111'; cvCtx.fillRect(0, 0, CVW, CVH);
-        const demo = (!cvState.img && cvHeadlineEl.value.trim() === '' && (cvState.style !== 's3l' || cvKickerEl.value.trim() === '') && (cvState.style !== 'brk' || cvSourceEl.value.trim() === ''));
-        const brkNoPhoto = (cvState.style === 'brk' && !cvState.img);
-        if (cvState.img) cvDrawCover(cvState.img, cvState.crop[size.key]);
+        const IMG = cvImgFor(size.key);
+        const demo = (!IMG && cvHeadlineEl.value.trim() === '' && (cvState.style !== 's3l' || cvKickerEl.value.trim() === '') && (cvState.style !== 'brk' || cvSourceEl.value.trim() === ''));
+        const brkNoPhoto = (cvState.style === 'brk' && !IMG);
+        if (IMG) cvDrawCover(IMG, cvState.crop[size.key]);
         else if (brkNoPhoto) cvBreakingBg();
         else cvPlaceholderBg();
         if (!brkNoPhoto) { const gp = cvGradParams(); const gdir = (cvState.style === 's01' || cvState.style === 'brk') ? 'bottom' : (isSquare ? 'center' : 'top'); cvGradient(gdir, gp.op, gp.reach); }
@@ -2707,7 +2781,7 @@
 
     // export BOTH sizes as two separate PNG files (or open both in Photopea)
     function cvExport(openInPp){
-        if (!cvState.img && cvState.style !== 'brk') { cvSetStatus(t('cv_needphoto')); return; }
+        if (!cvAnyImg() && cvState.style !== 'brk') { cvSetStatus(t('cv_needphoto')); return; }
         cvRenderAll();
         const stamp = Date.now();
         cvSizes.forEach((size, idx) => {
