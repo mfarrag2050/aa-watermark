@@ -812,7 +812,7 @@
         w_board:"Onay panosu oluştur", w_board_title:"Tüm çıktıları tek bir görselde toplar — masaya onay için göndermek üzere", w_board_ph:"Pano başlığı (isteğe bağlı)",
         w_cards_hint:"Başlık ve tasarım stilleri (Stil 01 · Stil 02 · 3 Satır · Son dakika) için <a data-go='tabC'>Kartlar</a> sekmesini kullanın — X + Instagram + Story tek seferde iner.",
         sm_btn:"✨ En iyi fotoğrafları seç", sm_count:"Kaç fotoğraf seçilsin (1–20)", sm_crop:"Akıllı kırpma", sm_crop_title:"Elle kırpılmayan fotoğraflar yüze ve konuya göre kırpılır (Instagram, X, Story ve GIF).",
-        sm_loading:"Akıllı analiz hazırlanıyor…", sm_analyzing:(i,n)=>`Fotoğraflar inceleniyor… ${i}/${n}`, sm_done:(k,r)=>`En iyi ${k} fotoğraf seçildi · ${r} fotoğraf elendi`, sm_nomodel:"Yüz modeli yüklenemedi; seçim netlik, ışık ve çözünürlüğe göre yapıldı.",
+        sm_loading:"Akıllı analiz hazırlanıyor…", sm_prescan:(i,n)=>`Ön tarama… ${i}/${n}`, sm_analyzing:(i,n)=>`En güçlü adaylar inceleniyor… ${i}/${n}`, sm_done:(k,r)=>`En iyi ${k} fotoğraf seçildi · ${r} fotoğraf elendi`, sm_nomodel:"Yüz modeli yüklenemedi; seçim netlik, ışık ve çözünürlüğe göre yapıldı.",
         sm_parked:(n)=>`Elenenler (${n}) — geri almak için tıklayın`, sm_restore_all:"Tümünü geri al", sm_score:"Puan", b_smart:"Akıllı kırpma",
         sm_why:{sharp:"net", soft:"bulanık", dark:"karanlık", bright:"aşırı parlak", eyes:"gözler kapalı", mouth:"konuşurken yakalanmış", cut:"yüz kadraj dışında", face:"yüz net ve iyi", lowres:"düşük çözünürlük"},
         gif_square:"GIF her zaman kare: 1080×1080",
@@ -882,7 +882,7 @@
         w_board:"Build approval board", w_board_title:"Collects every output into one image to send to the desk for approval", w_board_ph:"Board title (optional)",
         w_cards_hint:"For a headline and design styles (Style 01 · Style 02 · 3 Lines · Breaking) use the <a data-go='tabC'>Cards</a> tab — X + Instagram + Story export together.",
         sm_btn:"✨ Pick the best photos", sm_count:"How many to keep (1–20)", sm_crop:"Smart crop", sm_crop_title:"Photos you did not crop by hand are framed around faces and the subject (Instagram, X, Story and GIF).",
-        sm_loading:"Preparing smart analysis…", sm_analyzing:(i,n)=>`Analysing photos… ${i}/${n}`, sm_done:(k,r)=>`Kept the best ${k} · ${r} set aside`, sm_nomodel:"Face model could not load; picked by sharpness, light and resolution only.",
+        sm_loading:"Preparing smart analysis…", sm_prescan:(i,n)=>`Quick scan… ${i}/${n}`, sm_analyzing:(i,n)=>`Analysing the strongest candidates… ${i}/${n}`, sm_done:(k,r)=>`Kept the best ${k} · ${r} set aside`, sm_nomodel:"Face model could not load; picked by sharpness, light and resolution only.",
         sm_parked:(n)=>`Set aside (${n}) — click one to bring it back`, sm_restore_all:"Restore all", sm_score:"Score", b_smart:"Smart crop",
         sm_why:{sharp:"sharp", soft:"soft", dark:"dark", bright:"too bright", eyes:"eyes closed", mouth:"caught mid-word", cut:"face cut off", face:"good face", lowres:"low resolution"},
         gif_square:"GIF is always square: 1080×1080",
@@ -1799,6 +1799,7 @@
             const img = w.querySelector('img.thumb'); const f = files[i];
             if (!smartCropOn() || f.isCropped || cropDataArray[i]) { img.style.objectPosition = ''; continue; }
             const sb = await smartBoxFor(f, dims.w, dims.h);
+            await new Promise(r => setTimeout(r, 0));      // keep the panel responsive between photos
             if (tok !== frameToken) return;
             if (sb) {
                 const px = sb.iw - sb.w > 1 ? sb.x / (sb.iw - sb.w) * 100 : 50, py = sb.ih - sb.h > 1 ? sb.y / (sb.ih - sb.h) * 100 : 50;
@@ -1814,15 +1815,27 @@
         if (selectedFiles.length < 2 || !window.AASmart) return;
         btn.disabled = true;
         try {
-            st.textContent = t('sm_loading'); await AASmart.ensure();
-            const files = selectedFiles.slice(), crops = cropDataArray.slice(), infos = [], hashes = [];
+            frameToken++;                                   // pause thumbnail framing while picking
+            const files = selectedFiles.slice(), crops = cropDataArray.slice(), dims = getTargetDimensions(), hashes = [];
+            // stage 1: quick pixel scan of everything (sharpness, light, contrast, resolution)
+            const cheap = [];
             for (let i = 0; i < files.length; i++) {
-                st.textContent = t('sm_analyzing')(i + 1, files.length);
-                infos.push(await AASmart.analyze(keyOf(files[i])));
+                st.textContent = t('sm_prescan')(i + 1, files.length);
+                cheap.push(await AASmart.analyzeCheap(keyOf(files[i])));
                 hashes.push((await analyze(files[i])).hash);
             }
-            AASmart.rank(infos, getTargetDimensions());
-            const pick = AASmart.pickBest(infos, n, hashes, hamming, DUP_THRESHOLD), keep = new Set(pick);
+            AASmart.rank(cheap, dims);
+            // stage 2: faces / people / animals only for the strongest candidates
+            const order = cheap.map((c, i) => i).sort((a, b) => (cheap[b].score || 0) - (cheap[a].score || 0));
+            const cand = order.slice(0, Math.min(files.length, Math.max(2 * n, n + 6)));
+            st.textContent = t('sm_loading'); await AASmart.ensure();
+            const infos = cheap.slice();
+            for (let j = 0; j < cand.length; j++) {
+                st.textContent = t('sm_analyzing')(j + 1, cand.length);
+                infos[cand[j]] = await AASmart.analyze(keyOf(files[cand[j]]));
+            }
+            AASmart.rank(infos, dims);
+            const pick = AASmart.pickBest(infos, n, hashes, hamming, DUP_THRESHOLD, new Set(cand)), keep = new Set(pick);
             infos.forEach((inf, i) => { if (inf && inf.ok) smartScores.set(keyOf(files[i]), { score: inf.score, why: inf.why || [], top: keep.has(i) }); });
             selectedFiles = pick.map(i => files[i]); cropDataArray = pick.map(i => crops[i]);
             files.forEach((f, i) => { if (!keep.has(i)) parked.push({ file: f, crop: crops[i] }); });

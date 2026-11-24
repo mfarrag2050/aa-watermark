@@ -4,7 +4,8 @@
  * face-api (vladmandic build, MIT) with models served from ./models; composition for photos
  * without faces comes from smartcrop.js (MIT). Nothing is uploaded anywhere.
  *
- *   AASmart.analyze(file)            -> info (cached per File object)
+ *   AASmart.analyzeCheap(file)       -> pixel metrics only (fast; used to pre-filter)
+ *   AASmart.analyze(file)            -> full info: faces; if none, people/animals + head point (cached, also in IndexedDB)
  *   AASmart.rank(infos)              -> infos get .score (0..100) and .why[]
  *   AASmart.pickBest(infos, n)       -> indices of the best n, skipping near-duplicates
  *   AASmart.cropBox(info, tw, th)    -> {x, y, w, h} in original pixels, or null
@@ -13,6 +14,20 @@
     const MODEL_URL = 'models';
     const A = 640;                 // analysis size (long side)
     let loading = null, ready = false, failed = false;
+
+    let bodyLoading = null, bodyReady = false, OBJ = null, POSE = null;
+    const LABELS = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"];
+    const SUBJECT = new Set(['person', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'dog', 'cat', 'bird']);
+    // people / animal detector (CenterNet, COCO) and single-person pose (MoveNet Lightning) — from Human (MIT); loaded only when a photo has no face
+    async function ensureBody() {
+        if (bodyReady) return true;
+        if (!(await ensure())) return false;
+        if (!bodyLoading) bodyLoading = (async () => {
+            try { const tf = faceapi.tf; OBJ = await tf.loadGraphModel(MODEL_URL + '/centernet.json'); POSE = await tf.loadGraphModel(MODEL_URL + '/movenet-lightning.json'); bodyReady = true; }
+            catch (e) { console.warn('AASmart: body models unavailable', e); }
+        })();
+        await bodyLoading; return bodyReady;
+    }
 
     function loadScript(src) {
         return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
@@ -64,16 +79,100 @@
     const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
     function eyeAR(pts) { return (dist(pts[1], pts[5]) + dist(pts[2], pts[4])) / (2 * dist(pts[0], pts[3]) || 1); }
 
-    const cache = new WeakMap();
+    const cheapCache = new WeakMap(), fullCache = new WeakMap();
+    const yieldUI = () => new Promise(r => setTimeout(r, 0));
     async function bitmapOf(file) {
         try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) { return await createImageBitmap(file); }
     }
 
+    // ---------- persistent cache (IndexedDB): re-adding the same photos is instant ----------
+    const VER = 5;
+    let dbp = null;
+    function db() {
+        if (!dbp) dbp = new Promise(res => {
+            try { const r = indexedDB.open('aa-smart', 1); r.onupgradeneeded = () => r.result.createObjectStore('info'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }
+            catch (e) { res(null); }
+        });
+        return dbp;
+    }
+    const idKey = f => [f.name, f.size, f.lastModified, VER].join('|');
+    async function idbGet(k) { const d = await db(); if (!d) return null; return new Promise(res => { try { const q = d.transaction('info').objectStore('info').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); }
+    async function idbPut(k, v) { const d = await db(); if (!d) return; try { d.transaction('info', 'readwrite').objectStore('info').put(v, k); } catch (e) {} }
+
+    // ---------- stage 1: pixels only ----------
+    async function analyzeCheap(file) {
+        if (cheapCache.has(file)) return cheapCache.get(file);
+        const p = (async () => {
+            const info = { file, w: 0, h: 0, faces: [], subjects: [], ok: false, level: 'cheap' };
+            let bmp; try { bmp = await bitmapOf(file); } catch (e) { return info; }
+            info.w = bmp.width; info.h = bmp.height;
+            const k = A / Math.max(bmp.width, bmp.height), cw = Math.max(1, Math.round(bmp.width * k)), ch = Math.max(1, Math.round(bmp.height * k));
+            const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+            const ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(bmp, 0, 0, cw, ch); bmp.close && bmp.close();
+            const { g, d } = grayOf(ctx, cw, ch);
+            info.sharp = lapVar(g, cw, ch);
+            Object.assign(info, toneStats(g, d));
+            info.canvas = c;   // small (640px) copy for detection and smartcrop
+            info.ok = true; return info;
+        })();
+        cheapCache.set(file, p); return p;
+    }
+
+    // ---------- people and animals (only for photos without a face) ----------
+    async function detectSubjects(c) {
+        const tf = faceapi.tf, cw = c.width, ch = c.height;
+        // pad to a square (grey) instead of stretching: the detector is far more confident on undistorted frames
+        const S = Math.max(cw, ch), ox0 = (S - cw) / 2, oy0 = (S - ch) / 2;
+        const sq0 = document.createElement('canvas'); sq0.width = sq0.height = S;
+        const g0 = sq0.getContext('2d'); g0.fillStyle = '#808080'; g0.fillRect(0, 0, S, S); g0.drawImage(c, ox0, oy0);
+        const inp = tf.tidy(() => tf.image.resizeBilinear(tf.cast(tf.browser.fromPixels(sq0), 'float32').expandDims(0), [512, 512]));
+        const det = OBJ.execute(inp, ['tower_0/detections']); const arr = (await det.array())[0]; tf.dispose([inp, det]);
+        const k512 = S / 512;
+        let objs = [];
+        for (const d of arr) {
+            const [x1, y1, x2, y2, score, cls] = d; let label = LABELS[cls];
+            if (!(score >= 0.25) || !SUBJECT.has(label)) continue;
+            if (label !== 'person') label = 'animal:' + label;      // the exact species is unreliable on action shots
+            const X1 = clamp((x1 * k512 - ox0) / cw), Y1 = clamp((y1 * k512 - oy0) / ch), X2 = clamp((x2 * k512 - ox0) / cw), Y2 = clamp((y2 * k512 - oy0) / ch);
+            const b = { x: X1, y: Y1, w: X2 - X1, h: Y2 - Y1, score, label };
+            if (b.w < 0.03 || b.h < 0.03) continue;
+            objs.push(b);
+        }
+        objs.sort((a, b) => b.score - a.score);
+        const iou = (a, b) => { const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)); const I = ix * iy; return I / (a.w * a.h + b.w * b.h - I); };
+        const kept = []; for (const o of objs) if (!kept.some(k => (k.label === 'person') === (o.label === 'person') && iou(k, o) > 0.45)) kept.push(o);
+        // main subject: big, confident, people slightly preferred; a spectator at the edge does not beat the horse in the middle
+        const wt = o => o.w * o.h * Math.sqrt(o.score) * (o.label === 'person' ? 1.4 : 1);
+        kept.sort((a, b) => wt(b) - wt(a));
+        const M = kept[0];
+        const overl = (a, b) => { const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)); return ix * iy > 0.25 * Math.min(a.w * a.h, b.w * b.h); };
+        const group = M ? kept.filter(o => o === M || overl(M, o) && o.w * o.h > 0.08 * M.w * M.h || (o.label === M.label && o.w * o.h >= 0.35 * M.w * M.h && o.score >= 0.3)) : [];
+        group.forEach(o => o.main = true);
+        // head of the main person from the pose model (works with the face turned away)
+        let head = null; const main = group.filter(o => o.label === 'person').sort((a, b) => b.w * b.h - a.w * a.h)[0];
+        if (main && POSE) {
+            const ex = 0.15, bx = clamp(main.x - main.w * ex) * cw, by = clamp(main.y - main.h * ex) * ch;
+            const bw = Math.min(cw - bx, main.w * (1 + 2 * ex) * cw), bh = Math.min(ch - by, main.h * (1 + 2 * ex) * ch), side = Math.max(bw, bh);
+            const sq = document.createElement('canvas'); sq.width = sq.height = 192;
+            const sx = sq.getContext('2d'); sx.fillStyle = '#000'; sx.fillRect(0, 0, 192, 192);
+            const k = 192 / side, ox = (side - bw) / 2 * k, oy = (side - bh) / 2 * k;
+            sx.drawImage(c, bx, by, bw, bh, ox, oy, bw * k, bh * k);
+            const t = tf.tidy(() => tf.cast(tf.browser.fromPixels(sq), 'int32').expandDims(0));
+            const out = POSE.execute(t); const kp = (await out.array())[0][0]; tf.dispose([t, out]);
+            const pts = kp.slice(0, 7).map(([y, x, sc]) => ({ x: (bx + (x * 192 - ox) / k) / cw, y: (by + (y * 192 - oy) / k) / ch, sc }));
+            const hp = pts.slice(0, 5).filter(p => p.sc > 0.3);
+            if (hp.length) head = { x: hp.reduce((a, p) => a + p.x, 0) / hp.length, y: hp.reduce((a, p) => a + p.y, 0) / hp.length };
+            else { const sh = pts.slice(5, 7).filter(p => p.sc > 0.3); if (sh.length === 2) head = { x: (sh[0].x + sh[1].x) / 2, y: (sh[0].y + sh[1].y) / 2 - Math.abs(sh[0].x - sh[1].x) * 0.9 }; }
+        }
+
+        return { subjects: kept.slice(0, 8), head };
+    }
+
     // rot: 0 upright, 1 = image turned clockwise, -1 = counter-clockwise; results mapped back to the upright frame
     async function detectFaces(c, g, cw, ch, rot) {
-        let src = c, RW = cw, RH = ch;
+        let src = c;
         if (rot) {
-            src = document.createElement('canvas'); src.width = ch; src.height = cw; RW = ch; RH = cw;
+            src = document.createElement('canvas'); src.width = ch; src.height = cw;
             const x = src.getContext('2d');
             if (rot > 0) { x.translate(ch, 0); x.rotate(Math.PI / 2); } else { x.translate(0, cw); x.rotate(-Math.PI / 2); }
             x.drawImage(c, 0, 0);
@@ -100,36 +199,45 @@
         return out;
     }
 
+    // ---------- stage 2: full analysis ----------
+    const KEEP = ['w', 'h', 'sharp', 'mean', 'sd', 'hi', 'lo', 'colorful', 'faces', 'subjects', 'head'];
     async function analyze(file) {
-        if (cache.has(file)) return cache.get(file);
+        if (fullCache.has(file)) return fullCache.get(file);
         const p = (async () => {
-            const info = { w: 0, h: 0, faces: [], ok: false };
-            let bmp; try { bmp = await bitmapOf(file); } catch (e) { return info; }
-            info.w = bmp.width; info.h = bmp.height;
-            const k = A / Math.max(bmp.width, bmp.height), cw = Math.max(1, Math.round(bmp.width * k)), ch = Math.max(1, Math.round(bmp.height * k));
-            const c = document.createElement('canvas'); c.width = cw; c.height = ch;
-            const ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(bmp, 0, 0, cw, ch); bmp.close && bmp.close();
-            const { g, d } = grayOf(ctx, cw, ch);
-            info.sharp = lapVar(g, cw, ch);
-            Object.assign(info, toneStats(g, d));
-            info.canvas = c;   // kept small (640px) for smartcrop
+            const k = idKey(file), hit = await idbGet(k);
+            if (hit) return Object.assign({ file, ok: true, level: 'full', cached: true }, hit);
+            const base = await analyzeCheap(file);
+            const info = Object.assign({}, base, { faces: [], subjects: [], head: null, level: 'full' });
+            if (!base.ok) return info;
+            const c = base.canvas, cw = c.width, ch = c.height;
             if (await ensure()) {
                 try {
-                    // upright first; if no face is found, try the frame turned 90° both ways (people lying, leaning, upside-down riders)
-                    let faces = await detectFaces(c, g, cw, ch, 0);
-                    if (!faces.length) {
-                        const a = await detectFaces(c, g, cw, ch, 1), b = await detectFaces(c, g, cw, ch, -1);
+                    const { g } = grayOf(c.getContext('2d', { willReadFrequently: true }), cw, ch);
+                    // upright faces first
+                    info.faces = (await detectFaces(c, g, cw, ch, 0)).sort((a, b) => b.w * b.h - a.w * a.h);
+                } catch (e) { console.warn('AASmart: face detection failed', e); }
+                const maxFace = info.faces.reduce((m, f) => Math.max(m, f.w), 0);
+                if (maxFace < 0.07 && await ensureBody()) {   // no face, or only small ones (crowd): look for the actual subject
+                    try { Object.assign(info, await detectSubjects(c)); } catch (e) { console.warn('AASmart: subject detection failed', e); }
+                }
+                // still no face: try the frame turned 90° both ways (people lying, leaning, upside-down riders),
+                // unless the pose model already found the head of an upright main person — that saves two passes
+                const mp = (info.subjects || []).find(o => o.main && o.label === 'person');
+                if (!info.faces.length && !(mp && info.head && mp.h > mp.w * 1.1)) {
+                    try {
+                        const { g } = grayOf(c.getContext('2d', { willReadFrequently: true }), cw, ch);
+                        const A1 = await detectFaces(c, g, cw, ch, 1), B1 = await detectFaces(c, g, cw, ch, -1);
                         const best = (L) => L.reduce((m, f) => Math.max(m, f.conf), 0);
-                        faces = (best(a) >= best(b) ? a : b).filter(f => f.conf >= 0.6);
-                    }
-                    faces.sort((a, b) => b.w * b.h - a.w * a.h);
-                    info.faces = faces;
-                } catch (e) { console.warn('AASmart: detection failed', e); }
+                        info.faces = (best(A1) >= best(B1) ? A1 : B1).filter(f => f.conf >= 0.6).sort((a, b) => b.w * b.h - a.w * a.h);
+                    } catch (e) { console.warn('AASmart: rotated face detection failed', e); }
+                }
+                const rec = {}; KEEP.forEach(key => rec[key] = info[key]); idbPut(k, rec);
             }
-            info.ok = true; return info;
+            info.ok = true; await yieldUI(); return info;
         })();
-        cache.set(file, p); return p;
+        fullCache.set(file, p); return p;
     }
+    async function canvasOf(info) { if (info.canvas) return info.canvas; const c = await analyzeCheap(info.file); info.canvas = c.canvas; return info.canvas; }
 
     // ---------- scoring ----------
     const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -145,7 +253,7 @@
     function rank(infos, target) {
         const ok = infos.filter(i => i && i.ok);
         const lv = v => Math.log(1 + Math.max(0, v));
-        const sh = ok.map(i => lv(i.faces[0] ? Math.max(i.faces[0].sharp, i.sharp * 0.8) : i.sharp));
+        const sh = ok.map(i => lv(i.faces && i.faces[0] ? Math.max(i.faces[0].sharp, i.sharp * 0.8) : i.sharp));
         const lo = Math.min(...sh), hi = Math.max(...sh);
         ok.forEach((i, k) => {
             const why = [];
@@ -156,7 +264,11 @@
             const contrast = clamp(i.sd / 0.22);
             const color = clamp(i.colorful / 60);
             let face = 0.55, fq = null;
-            if (i.faces.length) { fq = faceQuality(i.faces[0]); face = 0.25 + 0.75 * fq.q; }
+            if (i.faces && i.faces.length) { fq = faceQuality(i.faces[0]); face = 0.25 + 0.75 * fq.q; }
+            else if (i.subjects && i.subjects.length) {             // no face, but a person/animal: reward a clear, uncut subject
+                const m = i.subjects.find(o => o.main) || i.subjects[0], cut = (m.x < 0.01 || m.x + m.w > 0.99) ? 0.75 : 1;
+                face = (0.45 + 0.25 * clamp(Math.sqrt(m.w * m.h) / 0.5)) * cut;
+            }
             let res = 1;
             if (target) { const need = Math.max(target.w, target.h); const have = Math.max(i.w, i.h); res = clamp(have / need, 0.4, 1); }
             const s = 100 * (0.30 * sharp + 0.14 * expo + 0.10 * contrast + 0.06 * color + 0.30 * face + 0.10 * res);
@@ -170,8 +282,9 @@
         return infos;
     }
     // greedy best-first, skipping near-duplicates (dHash hamming <= dupT) of anything already picked
-    function pickBest(infos, n, hashes, hamming, dupT = 10) {
-        const order = infos.map((i, k) => k).filter(k => infos[k] && infos[k].ok).sort((a, b) => infos[b].score - infos[a].score);
+    function pickBest(infos, n, hashes, hamming, dupT = 10, only = null) {
+        const rk = k => infos[k].score - (only && !only.has(k) ? 1000 : 0);   // fully analysed candidates first
+        const order = infos.map((i, k) => k).filter(k => infos[k] && infos[k].ok).sort((a, b) => rk(b) - rk(a));
         const pick = [], skipped = [];
         for (const k of order) {
             if (pick.length >= n) break;
@@ -190,7 +303,16 @@
         if (W / H > r) { ch = H; cw = H * r; } else { cw = W; ch = W / r; }
         if (Math.abs(cw - W) < 2 && Math.abs(ch - H) < 2) return { x: 0, y: 0, w: W, h: H };
         let cx, eyeY = null, top = null;
-        const faces = info.faces || [];
+        let faces = info.faces || [];
+        // small faces in the stands must not pull the crop away from the rider/horse in the middle
+        const mainS = (info.subjects || []).filter(o => o.main);
+        if (faces.length && mainS.length && faces.every(f => f.w < 0.07)) {          // a clear, large face always wins
+            const bodies = mainS.concat((info.subjects || []).filter(o => o.label === 'person' && o.w * o.h >= 0.1));
+            const inBox = (f, o) => { const fx = f.x + f.w / 2, fy = f.y + f.h / 2; return fx >= o.x && fx <= o.x + o.w && fy >= o.y && fy <= o.y + o.h; };
+            const inside = faces.filter(f => bodies.some(o => inBox(f, o)));
+            const area = mainS.reduce((m, o) => Math.max(m, o.w * o.h), 0);
+            if (inside.length) faces = inside; else if (area > 0.08) faces = [];
+        }
         if (faces.length) {
             const big = faces[0], A0 = big.w * big.h;
             const main = faces.filter(f => f.w * f.h >= A0 * 0.3 && f.conf > 0.5);
@@ -200,17 +322,32 @@
             cx = (x0 + x1) / 2; eyeY = big.eyeY * H; top = y0;
             // looking room: shift slightly toward the side the face is turned to (eye-centre vs box-centre)
             const turn = (big.cx - (big.x + big.w / 2)) / big.w; cx += clamp(turn, -0.25, 0.25) * big.w * W * 1.2;
+        } else if (info.subjects && info.subjects.length) {
+            // the main subject and what belongs to it (rider + horse, both wrestlers), worked out at detection time
+            const S = info.subjects, main = S.filter(o => o.main), big = main[0] || S[0];
+            const box = L => L.reduce((b, o) => ({ x0: Math.min(b.x0, o.x * W), y0: Math.min(b.y0, o.y * H), x1: Math.max(b.x1, (o.x + o.w) * W), y1: Math.max(b.y1, (o.y + o.h) * H) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+            let b = box(main.length ? main : [big]); if (b.x1 - b.x0 > cw) b = box([big]);
+            const hd = info.head;
+            cx = (b.x1 - b.x0 > cw * 0.85 && hd) ? hd.x * W : (b.x0 + b.x1) / 2;   // too wide to fit: keep the head in
+            let x = clamp(cx - cw / 2, 0, W - cw), y = 0;
+            if (ch < H - 1) {
+                if (hd) y = hd.y * H - 0.30 * ch; else y = b.y0 - 0.06 * ch;
+                if (b.y1 - b.y0 <= ch && y + ch < b.y1) y = b.y1 - ch;               // whole subject fits: keep the feet/hooves in
+                if (y > b.y0 - 0.03 * ch && (hd ? hd.y * H - (b.y0) < 0.5 * ch : true)) y = Math.min(y, b.y0 - 0.03 * ch);
+                y = clamp(y, 0, H - ch);
+            }
+            return { x, y, w: cw, h: ch };
         } else {
-            const sc = window.smartcrop || window.SmartCrop;
-            if (sc && info.canvas) {
-                const k = info.canvas.width / W, key = r.toFixed(3);
+            const sc = window.smartcrop || window.SmartCrop, cv = sc ? await canvasOf(info) : null;
+            if (sc && cv) {
+                const k = cv.width / W, key = r.toFixed(3);
                 info._sc = info._sc || {};
                 if (!(key in info._sc)) {
-                    try { const out = await sc.crop(info.canvas, { width: Math.max(1, Math.round(cw * k)), height: Math.max(1, Math.round(ch * k)), minScale: 1 }); info._sc[key] = out && out.topCrop; }
+                    try { const out = await sc.crop(cv, { width: Math.max(1, Math.round(cw * k)), height: Math.max(1, Math.round(ch * k)), minScale: 1 }); info._sc[key] = out && out.topCrop; }
                     catch (e) { info._sc[key] = null; }
                 }
                 const tc = info._sc[key];
-                // no face to anchor on: saliency alone can wander (a hand, a bright light), so meet the centre half-way
+                // nothing to anchor on: saliency alone can wander (a hand, a bright light), so meet the centre half-way
                 if (tc) { const sx = clamp(tc.x / k, 0, W - cw), sy = clamp(tc.y / k, 0, H - ch);
                           return { x: (sx + (W - cw) / 2) / 2, y: (sy + (H - ch) / 2) / 2, w: cw, h: ch }; }
             }
@@ -225,5 +362,8 @@
         return { x, y, w: cw, h: ch };
     }
 
-    window.AASmart = { ensure, analyze, rank, pickBest, cropBox, get ready() { return ready; }, get failed() { return failed; } };
+    // preload the face models when the browser is idle, so the first photos are analysed without a wait
+    try { (window.requestIdleCallback || (f => setTimeout(f, 1500)))(() => ensure(), { timeout: 4000 }); } catch (e) {}
+
+    window.AASmart = { ensure, ensureBody, analyzeCheap, analyze, rank, pickBest, cropBox, get ready() { return ready; }, get failed() { return failed; } };
 })();
