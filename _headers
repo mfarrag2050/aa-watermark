@@ -1,0 +1,11 @@
+# Cloudflare Pages response headers.
+# Model weights never change in place: a new model goes into a new folder (e.g. models-v2/) and MODEL_URL in aa-smart.js
+# is pointed at it, so the browser can keep these forever without asking the server again.
+/models/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Large vendored libraries: kept for a day, then refreshed in the background
+/vendor-face-api.js
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/smartcrop.js
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

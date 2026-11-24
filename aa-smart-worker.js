@@ -9,15 +9,15 @@ self.onmessage = (e) => {
         initP.then(ok => self.postMessage({ type: 'init', ok, backend: ok ? faceapi.tf.getBackend() : null }));
         return;
     }
-    if (m.type === 'detect') {
+    if (m.type === 'detect' || m.type === 'describe') {
         queue = queue.then(async () => {      // one photo at a time: the GPU is shared
             try {
                 await initP;
                 const c = new OffscreenCanvas(m.w, m.h);
                 c.getContext('2d', { willReadFrequently: true }).putImageData(new ImageData(new Uint8ClampedArray(m.buf), m.w, m.h), 0, 0);
-                const res = await AASmart._detectAll(c);
-                self.postMessage({ type: 'detect', id: m.id, res });
-            } catch (err) { self.postMessage({ type: 'detect', id: m.id, error: String((err && err.message) || err) }); }
+                const res = m.type === 'detect' ? await AASmart._detectAll(c) : await AASmart._describe(c, m.boxes);
+                self.postMessage({ type: m.type, id: m.id, res });
+            } catch (err) { self.postMessage({ type: m.type, id: m.id, error: String((err && err.message) || err) }); }
         });
     }
 };

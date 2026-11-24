@@ -837,7 +837,7 @@
         w_cards_hint:"Başlık ve tasarım stilleri (Stil 01 · Stil 02 · 3 Satır · Son dakika) için <a data-go='tabC'>Kartlar</a> sekmesini kullanın — X + Instagram + Story tek seferde iner.",
         sm_btn:"✨ En iyi fotoğrafları seç", sm_count:"Kaç fotoğraf seçilsin (1–20)", sm_crop:"Akıllı kırpma", sm_crop_title:"Elle kırpılmayan fotoğraflar yüze ve konuya göre kırpılır (Instagram, X, Story ve GIF).",
         sm_loading:"Akıllı analiz hazırlanıyor…", sm_prescan:(i,n)=>`Ön tarama… ${i}/${n}`, sm_analyzing:(i,n)=>`En güçlü adaylar inceleniyor… ${i}/${n}`, sm_done:(k,r)=>`En iyi ${k} fotoğraf seçildi · ${r} fotoğraf elendi`, sm_nomodel:"Yüz modeli yüklenemedi; seçim netlik, ışık ve çözünürlüğe göre yapıldı.",
-        sm_parked:(n)=>`Elenenler (${n}) — geri almak için tıklayın`, sm_restore_all:"Tümünü geri al", sm_score:"Puan", b_smart:"Akıllı kırpma", sz_open:"Üç ölçüde önizle (Instagram · X · Story)", sm_norepeat:"Aynı kişiyi tekrarlama", sm_norepeat_title:"Albümde aynı kişi iki kez yer almaz; yeterli farklı kare yoksa en iyileri tekrarla tamamlanır", sm_name:"Öncelikli isim", sm_name_title:"Bu ismi künyesinde (caption) geçen fotoğraflar öne çıkar", sm_repeats:(k)=>`${k} karede aynı kişi tekrar ediyor (yeterli farklı kare yok)`, sm_shot:{close:"yakın plan", medium:"orta plan", wide:"genel plan", scene:"mekân / detay"}, sz_safe:"Story: üst 250 px Instagram profil çubuğunun altında kalır", sz_rendering:"Hazırlanıyor…",
+        sm_parked:(n)=>`Elenenler (${n}) — geri almak için tıklayın`, sm_restore_all:"Tümünü geri al", sm_score:"Puan", b_smart:"Akıllı kırpma", sz_open:"Üç ölçüde önizle (Instagram · X · Story)", sm_norepeat:"Aynı kişiyi tekrarlama", sm_identify:(i,n)=>`Kişiler tanınıyor… ${i}/${n}`, sm_norepeat_title:"Albümde aynı kişi iki kez yer almaz; yeterli farklı kare yoksa en iyileri tekrarla tamamlanır", sm_name:"Öncelikli isim", sm_name_title:"Bu ismi künyesinde (caption) geçen fotoğraflar öne çıkar", sm_repeats:(k)=>`${k} karede aynı kişi tekrar ediyor (yeterli farklı kare yok)`, sm_shot:{close:"yakın plan", medium:"orta plan", wide:"genel plan", scene:"mekân / detay"}, sz_safe:"Story: üst 250 px Instagram profil çubuğunun altında kalır", sz_rendering:"Hazırlanıyor…",
         sm_why:{sharp:"net", soft:"bulanık", dark:"karanlık", bright:"aşırı parlak", eyes:"gözler kapalı", facedark:"yüz karanlıkta", faceburnt:"yüz aşırı parlak", name:"isim künyede geçiyor", mouth:"konuşurken yakalanmış", cut:"yüz kadraj dışında", face:"yüz net ve iyi", lowres:"düşük çözünürlük"},
         gif_square:"GIF her zaman kare: 1080×1080",
         w_gifdelay:"GIF kare süresi:", w_story:"Story", w_copy:"Kopyala", w_copied:"Kopyalandı ✓", w_archive:"Çekim tarihi haberden eskiyse fotoğraf arşivdendir",
@@ -907,7 +907,7 @@
         w_cards_hint:"For a headline and design styles (Style 01 · Style 02 · 3 Lines · Breaking) use the <a data-go='tabC'>Cards</a> tab — X + Instagram + Story export together.",
         sm_btn:"✨ Pick the best photos", sm_count:"How many to keep (1–20)", sm_crop:"Smart crop", sm_crop_title:"Photos you did not crop by hand are framed around faces and the subject (Instagram, X, Story and GIF).",
         sm_loading:"Preparing smart analysis…", sm_prescan:(i,n)=>`Quick scan… ${i}/${n}`, sm_analyzing:(i,n)=>`Analysing the strongest candidates… ${i}/${n}`, sm_done:(k,r)=>`Kept the best ${k} · ${r} set aside`, sm_nomodel:"Face model could not load; picked by sharpness, light and resolution only.",
-        sm_parked:(n)=>`Set aside (${n}) — click one to bring it back`, sm_restore_all:"Restore all", sm_score:"Score", b_smart:"Smart crop", sz_open:"Preview in three sizes (Instagram · X · Story)", sm_norepeat:"No repeated person", sm_norepeat_title:"The same person appears only once in the album; if there are not enough different shots the best repeats fill the gap", sm_name:"Priority name", sm_name_title:"Photos whose caption mentions this name move up", sm_repeats:(k)=>`${k} photos repeat a person (not enough different shots)`, sm_shot:{close:"close-up", medium:"medium shot", wide:"wide shot", scene:"scene / detail"}, sz_safe:"Story: the top 250 px sit under Instagram's profile bar", sz_rendering:"Rendering…",
+        sm_parked:(n)=>`Set aside (${n}) — click one to bring it back`, sm_restore_all:"Restore all", sm_score:"Score", b_smart:"Smart crop", sz_open:"Preview in three sizes (Instagram · X · Story)", sm_norepeat:"No repeated person", sm_identify:(i,n)=>`Recognising people… ${i}/${n}`, sm_norepeat_title:"The same person appears only once in the album; if there are not enough different shots the best repeats fill the gap", sm_name:"Priority name", sm_name_title:"Photos whose caption mentions this name move up", sm_repeats:(k)=>`${k} photos repeat a person (not enough different shots)`, sm_shot:{close:"close-up", medium:"medium shot", wide:"wide shot", scene:"scene / detail"}, sz_safe:"Story: the top 250 px sit under Instagram's profile bar", sz_rendering:"Rendering…",
         sm_why:{sharp:"sharp", soft:"soft", dark:"dark", bright:"too bright", eyes:"eyes closed", facedark:"face in shadow", faceburnt:"face burnt out", name:"name in caption", mouth:"caught mid-word", cut:"face cut off", face:"good face", lowres:"low resolution"},
         gif_square:"GIF is always square: 1080×1080",
         w_gifdelay:"GIF frame time:", w_story:"Story", w_copy:"Copy", w_copied:"Copied ✓", w_archive:"If the shot date is older than the story, the photo is from the archive",
@@ -1874,11 +1874,17 @@
         const tok = ++frameToken, files = selectedFiles.slice(), dims = getTargetDimensions();
         const st = document.getElementById('smartStatus');
         if (smartCropOn() && window.AASmart && !AASmart.ready && !AASmart.failed && files.length) st.textContent = t('sm_loading');
+        const pickable = files.length > 1 && window.AASmart;
         for (let i = 0; i < files.length; i++) {
             if (tok !== frameToken) return;
             const w = thumbnailContainer.children[i]; if (!w) continue;
             const img = w.querySelector('img.thumb'); const f = files[i];
-            if (!smartCropOn() || f.isCropped || cropDataArray[i]) { img.style.objectPosition = ''; continue; }
+            if (!smartCropOn() || f.isCropped || cropDataArray[i]) {
+                img.style.objectPosition = '';
+                // no framing needed, but analyse anyway while the editor works, so "pick the best" finds it ready
+                if (pickable) { try { await AASmart.analyze(keyOf(f)); } catch (e) {} await new Promise(r => setTimeout(r, 0)); }
+                continue;
+            }
             const sb = await smartBoxFor(f, dims.w, dims.h);
             await new Promise(r => setTimeout(r, 0));      // keep the panel responsive between photos
             if (tok !== frameToken) return;
@@ -1888,6 +1894,14 @@
             }
         }
         if (st.textContent === t('sm_loading')) st.textContent = '';
+        // then, still in the background, who is in each photo (only when "no repeated person" is on)
+        if (pickable && document.getElementById('noRepeatCheckbox').checked) {
+            for (const f of files) {
+                if (tok !== frameToken) return;
+                try { await AASmart.identify(await AASmart.analyze(keyOf(f))); } catch (e) {}
+                await new Promise(r => setTimeout(r, 0));
+            }
+        }
     }
 
     async function smartPick() {
@@ -1924,6 +1938,10 @@
                 if (infos[i] && infos[i].ok && norm([ip.headline, ip.caption, ip.keywords].filter(Boolean).join(' ')).includes(want)) { infos[i].score += 10; (infos[i].why = infos[i].why || []).push('name'); }
             }
             const noRepeat = document.getElementById('noRepeatCheckbox').checked;
+            if (noRepeat) for (let j = 0; j < cand.length; j++) {          // identity only for the shortlist, and only when asked for
+                st.textContent = t('sm_identify')(j + 1, cand.length);
+                await AASmart.identify(infos[cand[j]]);
+            }
             const pick = AASmart.pickBest(infos, n, hashes, hamming, DUP_THRESHOLD, new Set(cand), { noRepeat }), keep = new Set(pick);
             infos.forEach((inf, i) => { if (inf && inf.ok) smartScores.set(keyOf(files[i]), { score: inf.score, why: inf.why || [], top: keep.has(i), shot: inf.shot }); });
             selectedFiles = pick.map(i => files[i]); cropDataArray = pick.map(i => crops[i]);
@@ -1935,7 +1953,7 @@
     }
     document.getElementById('smartPickBtn').addEventListener('click', smartPick);
     try { const nr = localStorage.getItem('aa_norepeat'); if (nr !== null) document.getElementById('noRepeatCheckbox').checked = nr === 'true'; } catch (e) {}
-    document.getElementById('noRepeatCheckbox').addEventListener('change', e => { try { localStorage.setItem('aa_norepeat', e.target.checked); } catch (err) {} });
+    document.getElementById('noRepeatCheckbox').addEventListener('change', e => { try { localStorage.setItem('aa_norepeat', e.target.checked); } catch (err) {} if (e.target.checked && selectedFiles.length > 1) frameThumbs(); });
 
     function renderParked() {
         const wrap = document.getElementById('parkedWrap'), list = document.getElementById('parkedList');

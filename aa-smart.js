@@ -94,11 +94,13 @@
         });
         return wStart;
     }
-    function workerDetect(c) {
+    const workerDetect = c => workerCall('detect', c);
+
+    function workerCall(type, c, extra) {
         const im = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
         return new Promise((res, rej) => {
             const id = ++wSeq; wPend.set(id, { res, rej });
-            worker.postMessage({ type: 'detect', id, w: im.width, h: im.height, buf: im.data.buffer }, [im.data.buffer]);
+            worker.postMessage(Object.assign({ type, id, w: im.width, h: im.height, buf: im.data.buffer }, extra || {}), [im.data.buffer]);
         });
     }
 
@@ -269,6 +271,18 @@
         return out;
     }
 
+    // who is it: 128-number descriptors for the given faces (normalised boxes). Only asked for when "no repeated person" is on.
+    async function describeFaces(c, boxesN) {
+        if (!boxesN.length || !(await ensureRec())) return null;
+        const fa = G.faceapi, cw = c.width, ch = c.height, px = fa.tf.browser.fromPixels(c);
+        try {
+            const tens = await fa.extractFaceTensors(px, boxesN.map(f => new fa.Rect(f.x * cw, f.y * ch, f.w * cw, f.h * ch)));
+            const out = [];
+            for (const t of tens) out.push(Array.from(await fa.computeFaceDescriptor(t), v => Math.round(v * 1000) / 1000));
+            fa.tf.dispose(tens); return out;
+        } finally { px.dispose(); }
+    }
+
     // faces; people/animals when there is no clear face; rotated faces as a last resort
     async function detectAll(c) {
         const cw = c.width, ch = c.height, r = { faces: [], subjects: [], head: null };
@@ -277,18 +291,6 @@
             // upright faces first
             r.faces = (await detectFaces(c, g, cw, ch, 0)).sort((a, b) => b.w * b.h - a.w * a.h);
         } catch (e) { console.warn('AASmart: face detection failed', e); }
-        // who is it: a descriptor for the two biggest clear faces (enough to tell the main people apart)
-        const named = r.faces.filter(f => f.w >= 0.05 && f.conf >= 0.6).slice(0, 2);
-        if (named.length && await ensureRec()) {
-            const fa = G.faceapi, px = fa.tf.browser.fromPixels(c);
-            try {
-                const boxes = named.map(f => new fa.Rect(f.x * cw, f.y * ch, f.w * cw, f.h * ch));
-                const tens = await fa.extractFaceTensors(px, boxes);
-                for (let k = 0; k < tens.length; k++) { const d = await fa.computeFaceDescriptor(tens[k]); named[k].desc = Array.from(d, v => Math.round(v * 1000) / 1000); }
-                fa.tf.dispose(tens);
-            } catch (e) { console.warn('AASmart: identity failed', e); }
-            finally { px.dispose(); }
-        }
         const maxFace = r.faces.reduce((m, f) => Math.max(m, f.w), 0);
         if (maxFace < 0.07 && await ensureBody()) {   // no face, or only small ones (crowd): look for the actual subject
             try { Object.assign(r, await detectSubjects(c)); } catch (e) { console.warn('AASmart: subject detection failed', e); }
@@ -327,6 +329,22 @@
             info.ok = true; await yieldUI(); return info;
         })();
         fullCache.set(file, p); return p;
+    }
+    // identity for the two biggest clear upright faces; done once per photo and kept with the analysis
+    async function identify(info) {
+        if (!info || !info.ok || info.idDone || !info.faces) return info;
+        const faces = info.faces.filter(f => f.w >= 0.05 && f.conf >= 0.6 && !f.rot).slice(0, 2);
+        if (!faces.length) { info.idDone = true; return info; }
+        if (!(await ensure())) return info;
+        const c = await canvasOf(info), boxes = faces.map(f => ({ x: f.x, y: f.y, w: f.w, h: f.h }));
+        let d = null;
+        if (mode === 'worker') { try { d = await workerCall('describe', c, { boxes }); } catch (e) { console.warn('AASmart: worker identity failed', e); } }
+        if (!d) { try { d = await describeFaces(c, boxes); } catch (e) { console.warn('AASmart: identity failed', e); } }
+        if (!d) return info;
+        faces.forEach((f, k) => { if (d[k]) f.desc = d[k]; });
+        info.idDone = true;
+        const rec = {}; KEEP.forEach(key => rec[key] = info[key]); rec.idDone = true; idbPut(idKey(info.file), rec);
+        return info;
     }
     async function canvasOf(info) { if (info.canvas) return info.canvas; const c = await analyzeCheap(info.file); info.canvas = c.canvas; return info.canvas; }
 
@@ -548,5 +566,5 @@
     // preload the face models when the browser is idle, so the first photos are analysed without a wait
     if (!IN_WORKER) { try { (G.requestIdleCallback || (f => setTimeout(f, 1500)))(() => ensure(), { timeout: 4000 }); } catch (e) {} }
 
-    G.AASmart = { ensure, ensureBody, analyzeCheap, analyze, rank, pickBest, cropBox, _init: ensureLocal, _detectAll: detectAll, get mode() { return mode; }, get ready() { return ready; }, get failed() { return failed; } };
+    G.AASmart = { ensure, ensureBody, analyzeCheap, analyze, identify, rank, pickBest, cropBox, _init: ensureLocal, _detectAll: detectAll, _describe: describeFaces, get mode() { return mode; }, get ready() { return ready; }, get failed() { return failed; } };
 })();
