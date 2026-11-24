@@ -144,6 +144,26 @@
             border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; z-index: 2;
         }
         .cropped-badge { background: rgba(30,142,62,.9); color: #fff; }
+        .smart-badge { position: absolute; bottom: 0; left: 0; right: 0; padding: 2px 0; text-align: center; font-size: 10px; font-weight: 700; white-space: nowrap;
+            border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; z-index: 2; background: rgba(43,124,255,.9); color: #fff; }
+        .score-chip { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); z-index: 3; padding: 1px 7px; border-radius: 999px;
+            background: rgba(17,24,39,.85); color: #fff; font-size: 10.5px; font-weight: 700; cursor: help; white-space: nowrap; }
+        .score-chip.top { background: rgba(2,160,100,.95); }
+        #smartRow { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        #smartPickBtn { width: auto !important; flex: 0 0 auto; margin: 0 !important; padding: 8px 14px; border: 0; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; color: #fff;
+            background: linear-gradient(135deg, #7c3aed, #2b7cff); box-shadow: 0 4px 12px rgba(124,58,237,.25); }
+        #smartPickBtn:disabled { opacity: .6; cursor: wait; }
+        #smartN { width: 54px; padding: 6px 6px; border-radius: 8px; border: 1px solid #d6dae6; font-size: 13px; text-align: center; }
+        #smartStatus { font-size: 12px; color: #4b5563; }
+        #parkedWrap { display: none; margin-top: 14px; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; }
+        #parkedHead { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 8px; }
+        #parkedHead button { width: auto !important; margin: 0 !important; color: #334155 !important; flex: 0 0 auto; border: 0; background: #e2e8f0; border-radius: 8px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+        #parkedList { display: flex; flex-wrap: wrap; gap: 6px; }
+        #parkedList .pk { position: relative; width: 64px; height: 64px; cursor: pointer; }
+        #parkedList .pk img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; opacity: .65; transition: .2s; }
+        #parkedList .pk:hover img { opacity: 1; }
+        #parkedList .pk span { position: absolute; bottom: 2px; left: 2px; right: 2px; text-align: center; font-size: 9.5px; font-weight: 700; color: #fff; background: rgba(17,24,39,.75); border-radius: 5px; }
+        #gifSizeNote { display: none; font-size: 12px; color: #1a5ed8; margin: 6px 2px 0; font-weight: 600; }
         .uncropped-badge { background: rgba(217,48,37,.88); color: #fff; }
 
         #previewModal {
@@ -394,6 +414,7 @@
         <option id="opt978" value="978x548">978 x 548 (Yatay)</option>
         <option id="opt1920" value="1080x1920">1080 x 1920 (Story)</option>
     </select>
+    <div id="gifSizeNote"></div>
 
     <div id="drop-zone">
         Fotoğrafları sürükleyin, tıklayın veya ZIP yükleyin
@@ -444,7 +465,16 @@
 
     <div id="gifHint">🎞️ GIF karesi sırası: numaralı tutamağı (⠿) sürükleyin — 1 ilk kare, 2 ikinci…</div>
 
+    <div id="smartRow">
+        <button id="smartPickBtn">✨ En iyi fotoğrafları seç</button>
+        <input type="number" id="smartN" min="1" max="20" value="10" title="">
+        <label class="checkbox-container" id="lblSmartCropWrap"><input type="checkbox" id="smartCropCheckbox" checked> <span id="lbl_smartcrop">Akıllı kırpma</span></label>
+        <span id="smartStatus"></span>
+    </div>
+
     <div id="thumbnailContainer"></div>
+
+    <div id="parkedWrap"><div id="parkedHead"><span id="parkedTitle"></span><button id="parkedAll">Tümünü geri al</button></div><div id="parkedList"></div></div>
 
     </div><!-- /tab-watermark -->
 
@@ -714,6 +744,7 @@
     <script src="Sortable.min.js"></script>
     <script src="mp4-muxer.js"></script>
     <script src="mp4box.all.min.js"></script>
+    <script src="aa-smart.js"></script>
     <script>
     /* =====================================================================
        AA Media Kit — Photopea plugin
@@ -780,6 +811,11 @@
         w_all:"Tüm boyutlar (Instagram + X + Story)", w_all_title:"Her görsel Instagram (1080x1350), X (1080x1080) ve Story (1080x1920) boyutlarında, klasörlere ayrılmış tek ZIP olarak iner",
         w_board:"Onay panosu oluştur", w_board_title:"Tüm çıktıları tek bir görselde toplar — masaya onay için göndermek üzere", w_board_ph:"Pano başlığı (isteğe bağlı)",
         w_cards_hint:"Başlık ve tasarım stilleri (Stil 01 · Stil 02 · 3 Satır · Son dakika) için <a data-go='tabC'>Kartlar</a> sekmesini kullanın — X + Instagram + Story tek seferde iner.",
+        sm_btn:"✨ En iyi fotoğrafları seç", sm_count:"Kaç fotoğraf seçilsin (1–20)", sm_crop:"Akıllı kırpma", sm_crop_title:"Elle kırpılmayan fotoğraflar yüze ve konuya göre kırpılır (Instagram, X, Story ve GIF).",
+        sm_loading:"Akıllı analiz hazırlanıyor…", sm_analyzing:(i,n)=>`Fotoğraflar inceleniyor… ${i}/${n}`, sm_done:(k,r)=>`En iyi ${k} fotoğraf seçildi · ${r} fotoğraf elendi`, sm_nomodel:"Yüz modeli yüklenemedi; seçim netlik, ışık ve çözünürlüğe göre yapıldı.",
+        sm_parked:(n)=>`Elenenler (${n}) — geri almak için tıklayın`, sm_restore_all:"Tümünü geri al", sm_score:"Puan", b_smart:"Akıllı kırpma",
+        sm_why:{sharp:"net", soft:"bulanık", dark:"karanlık", bright:"aşırı parlak", eyes:"gözler kapalı", mouth:"konuşurken yakalanmış", cut:"yüz kadraj dışında", face:"yüz net ve iyi", lowres:"düşük çözünürlük"},
+        gif_square:"GIF her zaman kare: 1080×1080",
         w_gifdelay:"GIF kare süresi:", w_story:"Story", w_copy:"Kopyala", w_copied:"Kopyalandı ✓", w_archive:"Çekim tarihi haberden eskiyse fotoğraf arşivdendir",
         w_low:(d)=>`Düşük çözünürlük (${d})`, w_low_short:"Düşük çözünürlük", w_low_tip:(l)=>"Bu boyutlarda büyütülecek: "+l, w_dup:(l)=>"Benzer: #"+l, w_dup_tip:"Bu kareye çok benzeyen görseller var",
         w_sum_low:(n)=>`${n} görsel düşük çözünürlüklü (büyütülecek)`, w_sum_dup:(n)=>`${n} görsel birbirine çok benziyor — aynı kare tekrar etmesin`,
@@ -845,6 +881,11 @@
         w_all:"All sizes (Instagram + X + Story)", w_all_title:"Each image is exported as Instagram (1080x1350), X (1080x1080) and Story (1080x1920) in one ZIP with a folder per size",
         w_board:"Build approval board", w_board_title:"Collects every output into one image to send to the desk for approval", w_board_ph:"Board title (optional)",
         w_cards_hint:"For a headline and design styles (Style 01 · Style 02 · 3 Lines · Breaking) use the <a data-go='tabC'>Cards</a> tab — X + Instagram + Story export together.",
+        sm_btn:"✨ Pick the best photos", sm_count:"How many to keep (1–20)", sm_crop:"Smart crop", sm_crop_title:"Photos you did not crop by hand are framed around faces and the subject (Instagram, X, Story and GIF).",
+        sm_loading:"Preparing smart analysis…", sm_analyzing:(i,n)=>`Analysing photos… ${i}/${n}`, sm_done:(k,r)=>`Kept the best ${k} · ${r} set aside`, sm_nomodel:"Face model could not load; picked by sharpness, light and resolution only.",
+        sm_parked:(n)=>`Set aside (${n}) — click one to bring it back`, sm_restore_all:"Restore all", sm_score:"Score", b_smart:"Smart crop",
+        sm_why:{sharp:"sharp", soft:"soft", dark:"dark", bright:"too bright", eyes:"eyes closed", mouth:"caught mid-word", cut:"face cut off", face:"good face", lowres:"low resolution"},
+        gif_square:"GIF is always square: 1080×1080",
         w_gifdelay:"GIF frame time:", w_story:"Story", w_copy:"Copy", w_copied:"Copied ✓", w_archive:"If the shot date is older than the story, the photo is from the archive",
         w_low:(d)=>`Low resolution (${d})`, w_low_short:"Low resolution", w_low_tip:(l)=>"Will be upscaled for: "+l, w_dup:(l)=>"Similar: #"+l, w_dup_tip:"Other images look almost the same",
         w_sum_low:(n)=>`${n} image(s) are low resolution (will be upscaled)`, w_sum_dup:(n)=>`${n} images look almost identical — avoid repeating the same shot`,
@@ -930,6 +971,7 @@
       g('opt1920').textContent = "1080 x 1920 (" + t('w_story') + ")";
       g('lbl_all').textContent = t('w_all'); g('lblAllWrap').title = t('w_all_title');
       g('lbl_board').textContent = t('w_board'); g('lblBoardWrap').title = t('w_board_title');
+      g('smartPickBtn').textContent = t('sm_btn'); g('smartN').title = t('sm_count'); g('lbl_smartcrop').textContent = t('sm_crop'); g('lblSmartCropWrap').title = t('sm_crop_title'); g('parkedAll').textContent = t('sm_restore_all'); g('gifSizeNote').textContent = t('gif_square');
       g('boardTitle').placeholder = t('w_board_ph'); g('lbl_gifdelay').textContent = t('w_gifdelay');
       g('tabW').textContent = t('tab_w'); g('tabC').textContent = t('tab_c'); g('tabB').textContent = t('tab_b'); g('tabR').textContent = t('tab_r');
       if (document.getElementById('rlTitle')){
@@ -975,6 +1017,7 @@
     document.getElementById('langEn').addEventListener('click', () => setLang('en'));
 
     function getTargetDimensions() {
+        if (gifCheckbox && gifCheckbox.checked) return { w: 1080, h: 1080 };   // GIF output is always square
         const val = dimensionSelect.value;
         const [w, h] = val.split('x').map(Number);
         return { w, h };
@@ -1089,9 +1132,16 @@
             wrapper.appendChild(removeBtn);
 
             const badge = document.createElement("div");
-            badge.className = file.isCropped ? "cropped-badge" : "uncropped-badge";
-            badge.innerText = file.isCropped ? t('b_cropped') : t('b_uncropped');
+            const smartOn = smartCropOn() && !file.isCropped;
+            badge.className = file.isCropped ? "cropped-badge" : (smartOn ? "smart-badge" : "uncropped-badge");
+            badge.innerText = file.isCropped ? t('b_cropped') : (smartOn ? '✨ ' + t('b_smart') : t('b_uncropped'));
             wrapper.appendChild(badge);
+            const sc = smartScores.get(keyOf(file));
+            if (sc) {
+                const chip2 = document.createElement('div'); chip2.className = 'score-chip' + (sc.top ? ' top' : '');
+                chip2.textContent = '★ ' + sc.score; chip2.title = t('sm_score') + ': ' + sc.score + (sc.why.length ? ' — ' + sc.why.map(w => t('sm_why')[w] || w).join(' · ') : '');
+                wrapper.appendChild(chip2);
+            }
 
             thumbnailContainer.appendChild(wrapper);
 
@@ -1102,6 +1152,10 @@
 
         updateGifHint();
         decorateThumbs();
+        frameThumbs();
+        document.getElementById('smartRow').style.display = selectedFiles.length ? 'flex' : 'none';
+        document.getElementById('smartPickBtn').style.display = selectedFiles.length > 1 ? '' : 'none';
+        document.getElementById('smartN').style.display = selectedFiles.length > 1 ? '' : 'none';
 
         if (selectedFiles.length > 0 && !sortableInstance) {
             sortableInstance = new Sortable(thumbnailContainer, {
@@ -1125,7 +1179,18 @@
     function updateGifHint() {
         gifHint.style.display = (selectedFiles.length > 1 && gifCheckbox.checked) ? "block" : "none";
     }
-    gifCheckbox.addEventListener("change", () => { updateGifHint(); syncOptionRows(); });
+    function resetCropsForNewRatio() {
+        for (let i = 0; i < selectedFiles.length; i++) {
+            if (selectedFiles[i].isCropped) { selectedFiles[i] = selectedFiles[i].originalFile || selectedFiles[i]; selectedFiles[i].isCropped = false; }
+            if (cropDataArray[i]) cropDataArray[i] = null;
+        }
+    }
+    function syncGifSize() {
+        const on = gifCheckbox.checked;
+        dimensionSelect.disabled = on; dimensionSelect.style.opacity = on ? 0.5 : 1;
+        document.getElementById('gifSizeNote').style.display = on ? 'block' : 'none';
+    }
+    gifCheckbox.addEventListener("change", () => { resetCropsForNewRatio(); syncGifSize(); updateGifHint(); syncOptionRows(); if (selectedFiles.length) renderThumbnails(); });
     syncOptionRows();
 
     /* ============================ CROP EDITOR ============================ */
@@ -1181,9 +1246,19 @@
             }
             boxLeft = (imgWidth - boxWidth) / 2;
             boxTop = (imgHeight - boxHeight) / 2;
+            const idx = currentIndex, f = selectedFiles[idx];
+            if (f && !f.isCropped && !(cropImage.naturalWidth <= 864 && cropImage.naturalHeight <= 486)) {
+                smartBoxFor(f, dims.w, dims.h).then(sb => {
+                    if (!sb || idx !== currentIndex || cropDataArray[idx] !== lastAutoCrop) return;
+                    const k = imgWidth / sb.iw; boxWidth = sb.w * k; boxHeight = sb.h * k; boxLeft = sb.x * k; boxTop = sb.y * k;
+                    updateCropBoxDOM(); lastAutoCrop = cropDataArray[idx];
+                });
+            }
         }
         updateCropBoxDOM();
+        lastAutoCrop = cropDataArray[currentIndex];
     }
+    let lastAutoCrop = null;
 
     function openPreview(index) { currentIndex = index; updatePreview(); previewModal.style.display = "flex"; }
 
@@ -1494,7 +1569,8 @@
         cropDataArray = [];
         thumbnailContainer.innerHTML = "";
         fileInput.value = "";
-        gifCheckbox.checked = false;
+        gifCheckbox.checked = false; syncGifSize();
+        parked = []; renderParked(); document.getElementById('smartStatus').textContent = '';
         gifHint.style.display = "none";
         warnSummary.style.display = "none";
         syncOptionRows();
@@ -1512,7 +1588,7 @@
                 img.onload = async function () {
                     let dims = dimsOverride || getTargetDimensions();
                     let targetW = dims.w, targetH = dims.h;
-                    if (img.width <= 864 && img.height <= 486) { targetW = img.width; targetH = img.height; }
+                    if (img.width <= 864 && img.height <= 486 && !gifCheckbox.checked) { targetW = img.width; targetH = img.height; }
 
                     const canvas = document.createElement("canvas");
                     canvas.width = targetW; canvas.height = targetH;
@@ -1532,7 +1608,11 @@
                     } else {
                         const targetRatio = targetW / targetH;
                         const imgRatio = img.width / img.height;
-                        if (imgRatio > targetRatio) {
+                        const sb = file.isCropped ? null : await smartBoxFor(file, targetW, targetH);
+                        if (sb) {
+                            const kx = img.width / sb.iw, ky = img.height / sb.ih;
+                            srcX = sb.x * kx; srcY = sb.y * ky; srcW = sb.w * kx; srcH = sb.h * ky;
+                        } else if (imgRatio > targetRatio) {
                             srcW = img.height * targetRatio;
                             srcX = (img.width - srcW) / 2;
                         } else {
@@ -1691,6 +1771,87 @@
             p = start + len;
         }
     }
+
+    /* ============================ SMART: best photos + smart crop ============================ */
+    const smartScores = new WeakMap();      // original File -> {score, why, top}
+    let parked = [];                        // set-aside photos: {file, crop}
+    const smartCropOn = () => { const c = document.getElementById('smartCropCheckbox'); return !c || c.checked; };
+    try { const v = localStorage.getItem('aa_smartcrop'); if (v !== null) document.getElementById('smartCropCheckbox').checked = (v === 'true'); } catch (e) {}
+    document.getElementById('smartCropCheckbox').addEventListener('change', (e) => { try { localStorage.setItem('aa_smartcrop', e.target.checked); } catch (er) {} renderThumbnails(); });
+
+    // crop box for a file at the given output size, in original pixels (+ the analysed size), or null
+    async function smartBoxFor(file, tw, th) {
+        if (!smartCropOn() || !window.AASmart) return null;
+        try {
+            const inf = await AASmart.analyze(keyOf(file)); if (!inf || !inf.ok) return null;
+            const b = await AASmart.cropBox(inf, tw, th); return b ? Object.assign({ iw: inf.w, ih: inf.h }, b) : null;
+        } catch (e) { return null; }
+    }
+    // show each thumbnail framed the way it will be exported
+    let frameToken = 0;
+    async function frameThumbs() {
+        const tok = ++frameToken, files = selectedFiles.slice(), dims = getTargetDimensions();
+        const st = document.getElementById('smartStatus');
+        if (smartCropOn() && window.AASmart && !AASmart.ready && !AASmart.failed && files.length) st.textContent = t('sm_loading');
+        for (let i = 0; i < files.length; i++) {
+            if (tok !== frameToken) return;
+            const w = thumbnailContainer.children[i]; if (!w) continue;
+            const img = w.querySelector('img.thumb'); const f = files[i];
+            if (!smartCropOn() || f.isCropped || cropDataArray[i]) { img.style.objectPosition = ''; continue; }
+            const sb = await smartBoxFor(f, dims.w, dims.h);
+            if (tok !== frameToken) return;
+            if (sb) {
+                const px = sb.iw - sb.w > 1 ? sb.x / (sb.iw - sb.w) * 100 : 50, py = sb.ih - sb.h > 1 ? sb.y / (sb.ih - sb.h) * 100 : 50;
+                img.style.objectPosition = px.toFixed(1) + '% ' + py.toFixed(1) + '%';
+            }
+        }
+        if (st.textContent === t('sm_loading')) st.textContent = '';
+    }
+
+    async function smartPick() {
+        const btn = document.getElementById('smartPickBtn'), st = document.getElementById('smartStatus');
+        const n = Math.max(1, Math.min(20, parseInt(document.getElementById('smartN').value, 10) || 10));
+        if (selectedFiles.length < 2 || !window.AASmart) return;
+        btn.disabled = true;
+        try {
+            st.textContent = t('sm_loading'); await AASmart.ensure();
+            const files = selectedFiles.slice(), crops = cropDataArray.slice(), infos = [], hashes = [];
+            for (let i = 0; i < files.length; i++) {
+                st.textContent = t('sm_analyzing')(i + 1, files.length);
+                infos.push(await AASmart.analyze(keyOf(files[i])));
+                hashes.push((await analyze(files[i])).hash);
+            }
+            AASmart.rank(infos, getTargetDimensions());
+            const pick = AASmart.pickBest(infos, n, hashes, hamming, DUP_THRESHOLD), keep = new Set(pick);
+            infos.forEach((inf, i) => { if (inf && inf.ok) smartScores.set(keyOf(files[i]), { score: inf.score, why: inf.why || [], top: keep.has(i) }); });
+            selectedFiles = pick.map(i => files[i]); cropDataArray = pick.map(i => crops[i]);
+            files.forEach((f, i) => { if (!keep.has(i)) parked.push({ file: f, crop: crops[i] }); });
+            parked.sort((a, b) => ((smartScores.get(keyOf(b.file)) || {}).score || 0) - ((smartScores.get(keyOf(a.file)) || {}).score || 0));
+            renderThumbnails(); renderParked();
+            st.textContent = t('sm_done')(pick.length, files.length - pick.length) + (AASmart.failed ? ' — ' + t('sm_nomodel') : '');
+        } finally { btn.disabled = false; }
+    }
+    document.getElementById('smartPickBtn').addEventListener('click', smartPick);
+
+    function renderParked() {
+        const wrap = document.getElementById('parkedWrap'), list = document.getElementById('parkedList');
+        wrap.style.display = parked.length ? 'block' : 'none';
+        document.getElementById('parkedTitle').textContent = t('sm_parked')(parked.length);
+        list.innerHTML = '';
+        parked.forEach((p, k) => {
+            const d = document.createElement('div'); d.className = 'pk';
+            const sc = smartScores.get(keyOf(p.file));
+            d.title = sc ? t('sm_score') + ': ' + sc.score + (sc.why.length ? ' — ' + sc.why.map(w => t('sm_why')[w] || w).join(' · ') : '') : '';
+            const im = document.createElement('img'); im.src = URL.createObjectURL(p.file); im.onload = () => URL.revokeObjectURL(im.src);
+            d.appendChild(im);
+            if (sc) { const s = document.createElement('span'); s.textContent = '★ ' + sc.score; d.appendChild(s); }
+            d.addEventListener('click', () => { const it = parked.splice(k, 1)[0]; selectedFiles.push(it.file); cropDataArray.push(it.crop); renderThumbnails(); renderParked(); });
+            list.appendChild(d);
+        });
+    }
+    document.getElementById('parkedAll').addEventListener('click', () => {
+        parked.forEach(p => { selectedFiles.push(p.file); cropDataArray.push(p.crop); }); parked = []; renderThumbnails(); renderParked();
+    });
 
     // 64-bit difference hash: robust to resizing / recompression, flags near-duplicate shots.
     function dHash(bitmap) {
