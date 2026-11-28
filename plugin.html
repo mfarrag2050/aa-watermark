@@ -2554,15 +2554,34 @@
     function cvSpaceWidth(fs){ cvCtx.font = '400 ' + fs + 'px HNArabic'; return cvCtx.measureText(' ').width || fs * 0.25; }
     function cvLineWidth(toks, fs, allBold){ if (!toks.length) return 0; let s = 0; toks.forEach(t => s += cvWordWidth(t, fs, allBold)); return s + cvSpaceWidth(fs) * (toks.length - 1); }
     function cvLayoutHeadline(tokens, boxW, maxFont, minFont, allBold){
+        // Manual mode: the editor pressed Enter — keep the lines exactly as typed, only shrink to fit
+        if (tokens.some(t => t.br)){
+            const manual = []; let cur = [];
+            tokens.forEach(t => { if (t.br){ if (cur.length) manual.push(cur); cur = []; } else cur.push(t); });
+            if (cur.length) manual.push(cur);
+            for (let fs = maxFont; fs >= minFont; fs -= 2){
+                if (manual.every(l => cvLineWidth(l, fs, allBold) <= boxW)) return { fs, lines: manual, lh: Math.round(fs * 1.34) };
+            }
+            return { fs: minFont, lines: manual, lh: Math.round(minFont * 1.34) };
+        }
         tokens = tokens.filter(t => !t.br);
         const n = tokens.length;
         for (let fs = maxFont; fs >= minFont; fs -= 2){
             if (n === 0) return { fs, lines: [], lh: Math.round(fs * 1.34) };
             if (n === 1){ if (cvWordWidth(tokens[0], fs, allBold) <= boxW) return { fs, lines: [tokens], lh: Math.round(fs * 1.34) }; else continue; }
+            // two lines as even as possible; a slightly longer first line is preferred,
+            // and a single orphan word on the last line is avoided (house line-breaking rule)
             let best = null;
-            for (let k = 1; k < n; k++){ const l1 = tokens.slice(0, k), l2 = tokens.slice(k); const w1 = cvLineWidth(l1, fs, allBold), w2 = cvLineWidth(l2, fs, allBold); if (w1 <= boxW && w2 <= boxW && w1 >= w2){ const d = w1 - w2; if (!best || d < best.d) best = { k, d }; } }
+            for (let k = 1; k < n; k++){
+                const l1 = tokens.slice(0, k), l2 = tokens.slice(k);
+                const w1 = cvLineWidth(l1, fs, allBold), w2 = cvLineWidth(l2, fs, allBold);
+                if (w1 > boxW || w2 > boxW) continue;
+                let cost = Math.abs(w1 - w2) + (w1 < w2 ? 0.25 * (w2 - w1) : 0);
+                if (n >= 3 && l2.length === 1) cost += boxW;
+                if (n >= 3 && l1.length === 1) cost += boxW * 0.5;
+                if (!best || cost < best.cost) best = { k, cost };
+            }
             if (best) return { fs, lines: [tokens.slice(0, best.k), tokens.slice(best.k)], lh: Math.round(fs * 1.34) };
-            for (let k = 1; k < n; k++){ const l1 = tokens.slice(0, k), l2 = tokens.slice(k); if (cvLineWidth(l1, fs, allBold) <= boxW && cvLineWidth(l2, fs, allBold) <= boxW) return { fs, lines: [l1, l2], lh: Math.round(fs * 1.34) }; }
         }
         const fs = minFont, lines = [[], []]; let li = 0;
         tokens.forEach(tk => { if (li === 0 && lines[0].length && cvLineWidth(lines[0].concat(tk), fs, allBold) > boxW) li = 1; lines[li].push(tk); });
